@@ -1,0 +1,19 @@
+﻿-------------------------------------------------------------------
+Sense/Net ECM Enterprise - Enterprise Content Management for ASP.NET
+-------------------------------------------------------------------
+CREDITS
+-------------------------------------------------------------------
+
+These Sense/Net employees have helped Sense/Net Task Management 
+become what it is today. The list is in alphabetical order.
+
+-------------------------------------------------------------------
+
+Anikó Litványi
+Anna Balog
+Ildikó Tamási
+Miklós Tóth
+Sándor Kiss
+Zoltán Gyebrovszki
+
+------------------------------END----------------------------------

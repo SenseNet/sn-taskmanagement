@@ -1,0 +1,21 @@
+﻿How to build the web deployment package?
+
+All outer assemblies and files must be referenced in the solution under the TaskManagement folder. Required steps:
+	- Check out all files under the TaskManagement
+	- Build solution
+	- Check in all changes.
+	- Right click on the TaskManagement.Web node in the Solution Explorer.
+	- Select "Publish..." menu item and follow the instructions.
+....
+
+How to modify the package:
+
+- Extract the package zip.
+- Open for edit the parameters.xml file.
+
+1. Delete the default name of the web application:
+	- Remove value of the "defaultValue" of the "IIS Web Application Name" named parameter. This parameter will be something like this:
+		<parameter name="IIS Web Application Name" defaultValue="" tags="IisApp">
+
+2. Customizing parameter description:
+	- Add "description" attribute to any <parameter> element. For example:

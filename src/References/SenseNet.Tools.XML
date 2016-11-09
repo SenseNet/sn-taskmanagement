@@ -1,0 +1,1165 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SenseNet.Tools</name>
+    </assembly>
+    <members>
+        <member name="T:SenseNet.Tools.CommandLineArguments.NoNameOptionAttribute">
+            <summary>
+            Annotates a property that can be linked to an argument without a name.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.NoNameOptionAttribute.Order">
+            <summary>
+            Determines parameter order on the usage screen.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.NoNameOptionAttribute.Required">
+            <summary>
+            Required in argument array or not.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.NoNameOptionAttribute.NameInHelp">
+            <summary>
+            Name of the argument on the usage screen.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.NoNameOptionAttribute.HelpText">
+            <summary>
+            Text displayed in the detailed parameter information on the usage screen.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.CommandLineArguments.NoNameOptionAttribute.#ctor(System.Int32,System.Boolean,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the NoNameOptionAttribute class.
+            </summary>
+            <param name="order">Parameter order. Required.</param>
+            <param name="required">Required in argument array or not. Optional, default: false</param>
+            <param name="nameInHelp">Name of the argument on the usage screen. Optional, default: null.</param>
+            <param name="helpText">Text displayed in the detailed parameter information on the usage screen. Optional, default: null.</param>
+        </member>
+        <member name="T:SenseNet.Tools.CommandLineArguments.CommandLineArgumentAttribute">
+            <summary>
+            Annotates a property that can be linked to a named argument.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.CommandLineArgumentAttribute.Aliases">
+            <summary>
+            Comma or semicolon separated words that will be synonyms of the name.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.CommandLineArgumentAttribute.Name">
+            <summary>
+            Name of the argument. Optional, default: the name of the annotated property.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.CommandLineArgumentAttribute.Required">
+            <summary>
+            Required in argument array or not.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.CommandLineArgumentAttribute.HelpText">
+            <summary>
+            Text displayed in the detailed parameter information on the usage screen.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.CommandLineArguments.CommandLineArgumentAttribute.#ctor(System.String,System.Boolean,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the CommandLineArgumentAttribute class.
+            </summary>
+            <param name="name">Name of the argument. Optional, default: the name of the annotated property.</param>
+            <param name="required">Required in argument array or not. Optional, default: false</param>
+            <param name="aliases">Comma or semicolon separated words that will be synonyms of the name.</param>
+            <param name="helpText">Text displayed in the detailed parameter information on the usage screen. Optional, default: null.</param>
+        </member>
+        <member name="T:SenseNet.Tools.CommandLineArguments.ResultState">
+            <summary>
+            Defines the category of the parsing result.
+            </summary>
+        </member>
+        <member name="F:SenseNet.Tools.CommandLineArguments.ResultState.Succesful">
+            <summary>Successfully parsed.</summary>
+        </member>
+        <member name="F:SenseNet.Tools.CommandLineArguments.ResultState.UnknownError">
+            <summary>Unknown error occured.</summary>
+        </member>
+        <member name="F:SenseNet.Tools.CommandLineArguments.ResultState.UnknownArgument">
+            <summary>Unknown argument in the argument array.</summary>
+        </member>
+        <member name="F:SenseNet.Tools.CommandLineArguments.ResultState.MissingArgument">
+            <summary>A required argument is missing.</summary>
+        </member>
+        <member name="F:SenseNet.Tools.CommandLineArguments.ResultState.MissingArgumentName">
+            <summary>Only a value is provided.</summary>
+        </member>
+        <member name="F:SenseNet.Tools.CommandLineArguments.ResultState.MissingValue">
+            <summary>Required value is missing.</summary>
+        </member>
+        <member name="F:SenseNet.Tools.CommandLineArguments.ResultState.InvalidType">
+            <summary>Wrong value type (e.g. trying to convert a string to an integer).</summary>
+        </member>
+        <member name="T:SenseNet.Tools.CommandLineArguments.ArgumentParser">
+            <summary>
+            Provides methods to analyze the given configuration object by its annotated properties,
+            fills it with values in an argument array and generates information about the analyzed object.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.CommandLineArguments.ArgumentParser.Parse(System.String[],System.Object)">
+            <summary>
+            Analyzes the target object by its annotations and fills its properties 
+            with the values in the given argument array.
+            </summary>
+            <returns>An instance of the parser to provide more information.</returns>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.ArgumentParser.IsHelp">
+            <summary>
+            Gets a value that indicates wether the argument list contains a help request.
+            If that is the case, the configuration object will not be filled and the help
+            text should be provided to the user, using the GetHelpText method of the parser.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.CommandLineArguments.ArgumentParser.GetUsage">
+            <summary>
+            Returns with the generated calling information. For example:
+            ToolName [-OptionalParameter:String] &lt;-Limit:String&gt;
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.CommandLineArguments.ArgumentParser.GetAppNameAndVersion">
+            <summary>
+            Returns the name of the assembly and its current version e.g.: "SnBenchmark 1.0.0.0"
+            </summary>
+            <exception cref="T:System.InvalidOperationException"></exception>
+        </member>
+        <member name="M:SenseNet.Tools.CommandLineArguments.ArgumentParser.GetHelpText">
+            <summary>
+            Returns detailed information about how to use the tool.
+            Contains the app name and version, usage information and list of the
+            available command line arguments.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Tools.CommandLineArguments.ParsingException">
+            <summary>
+            Represents an argument parsing error.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.ParsingException.ErrorCode">
+            <summary>
+            Type of the error that occured during parsing arguments. See the ResultState enumeration for possible values.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.ParsingException.Result">
+            <summary>
+            Original parser instance that can provide a formatted message and a generated help text.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Tools.CommandLineArguments.ParsingException.FormattedMessage">
+            <summary>
+            Error message to write to the console.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.CommandLineArguments.ParsingException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the ParsingException class with serialized data.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Tools.Extensions">
+            <summary>
+            Class for extension methods
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.Extensions.ForEachAsync``1(System.Collections.Generic.IEnumerable{``0},System.Int32,System.Func{``0,System.Threading.Tasks.Task})">
+            <summary>
+            Enumerates a collection in parallel and calls an async method on each item. Useful for making 
+            parallel async calls, e.g. independent web requests when the degree of parallelism needs to be
+            limited.
+            </summary>
+            <typeparam name="T">Generic type of collection items.</typeparam>
+            <param name="source">Source collection.</param>
+            <param name="degreeOfParalellism">Number of partitions that the source collection is divided to.</param>
+            <param name="action">An async action to call on each item.</param>
+            <returns> A task tham completes when the action has completed on all items.</returns>
+        </member>
+        <member name="T:SenseNet.Tools.Retrier">
+            <summary>
+            Provides methods that help retrying an operation. You can provide 
+            the maximum number of retry attempts, the callback that should be
+            called and the exception type that should be suppressed.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.Retrier.Retry(System.Int32,System.Int32,System.Type,System.Action)">
+            <summary>
+            Calls the callback method safely. If the given type of exception is caught,
+            waits and calls the action again. The maximum number of attempts is determined
+            by the count parameter.
+            </summary>
+            <param name="count">Maximum number of attempts before throwing the caught exception.</param>
+            <param name="waitMilliseconds">Milliseconds to wait between two attempts.</param>
+            <param name="caughtExceptionType">Type of exception that is suppressed and triggers the next attempt.</param>
+            <param name="callback">Void, parameterless method that the retrier executes.</param>
+        </member>
+        <member name="M:SenseNet.Tools.Retrier.Retry``1(System.Int32,System.Int32,System.Type,System.Func{``0})">
+            <summary>
+            Calls the callback method safely. If the given type of exception is caught,
+            waits and calls the function again. The maximum number of attempts is determined
+            by the count parameter.
+            </summary>
+            <typeparam name="T">The type of the returned object.</typeparam>
+            <param name="count">Maximum number of attempts before throwing the caught exception.</param>
+            <param name="waitMilliseconds">Milliseconds to wait between two attempts.</param>
+            <param name="caughtExceptionType">Type of exception that is suppressed and triggers the next attempt.</param>
+            <param name="callback">Parameterless method with T return type.</param>
+            <returns>Result of the callback method.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.Retrier.Retry(System.Int32,System.Int32,System.Action,System.Func{System.Int32,System.Exception,System.Boolean})">
+            <summary>
+            Performs an operation, and based on a condition it retries it a given number of times. 
+            The checkCondition method is always called, even if there was no exception during 
+            the operation. If it returns true, there will be no retries and the metod will exit.
+            </summary>
+            <param name="count">Maximum number of attempts before throwing the caught exception.</param>
+            <param name="waitMilliseconds">Milliseconds to wait between two attempts.</param>
+            <param name="callback">Parameterless method that performs the operation that will be retried.</param>
+            <param name="checkCondition">Function that will decide about trying again.
+            This method must have 2 parameters with the following types in this order: int, Exception.
+            The first parameter is the number of the current attempt, the second is the caught exception or null. 
+            If the decider method returns with true, the main method returns immediately. Otherwise the next 
+            attempt will be performed.
+            </param>
+        </member>
+        <member name="M:SenseNet.Tools.Retrier.Retry``1(System.Int32,System.Int32,System.Func{``0},System.Func{``0,System.Int32,System.Exception,System.Boolean})">
+            <summary>
+            Performs an operation, and based on a condition it retries it a given number of times. 
+            The checkCondition method is always called, even if there was no exception during 
+            the operation. If it returns true, there will be no retries and the metod will exit.
+            </summary>
+            <typeparam name="T">The type of the returned object.</typeparam>
+            <param name="count">Maximum number of attempts before throwing the caught exception.</param>
+            <param name="waitMilliseconds">Milliseconds to wait between two attempts.</param>
+            <param name="callback">Parameterless method with T return type.</param>
+            <param name="checkCondition">Function that will decide about trying again.
+            This method must have 3 parameters with the following types in this order: T, int, Exception.
+            The first parameter is the return value of the current attempt, second is the number of the
+            current attempt and the third is the caught exception or null. If this checker method 
+            returns with true, the main method returns with the callback's result immediately. 
+            Otherwise the next attempt will be performed.
+            </param>
+            <returns>Result of the callback method.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.Retrier.RetryAsync``1(System.Int32,System.Int32,System.Func{System.Threading.Tasks.Task{``0}},System.Func{``0,System.Int32,System.Exception,System.Boolean})">
+            <summary>
+            Performs an async operation, and based on a condition it retries it a given number of times. 
+            The checkCondition method is always called, even if there was no exception during the operation. 
+            If it returns true, there will be no retries and the metod will exit.
+            </summary>
+            <typeparam name="T">The type of the returned object.</typeparam>
+            <param name="count">Maximum number of attempts before throwing the caught exception.</param>
+            <param name="waitMilliseconds">Milliseconds to wait between two attempts.</param>
+            <param name="callback">Parameterless method with T return type.</param>
+            <param name="checkCondition">Function that will decide about trying again.
+            This method must have 3 parameters with the following types in this order: T, int, Exception.
+            The first parameter is the return value of the current attempt, second is the number of the 
+            current attempt and the third is the caught exception or null. If this checker method 
+            returns with true, the main method returns with the callback's result immediately. 
+            Otherwise the next attempt will be performed.
+            </param>
+            <returns>Result of the callback method.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.Retrier.RetryAsync(System.Int32,System.Int32,System.Func{System.Threading.Tasks.Task},System.Func{System.Int32,System.Exception,System.Boolean})">
+            <summary>
+            Performs an operation asynchronously, and based on a condition it retries it a given number of times. 
+            The checkCondition method is always called, even if there was no exception during the operation. 
+            If it returns true, there will be no retries and the metod will exit.
+            </summary>
+            <param name="count">Maximum number of attempts before throwing the caught exception.</param>
+            <param name="waitMilliseconds">Milliseconds to wait between two attempts.</param>
+            <param name="callback">Parameterless method that performs the operation that will be retried.</param>
+            <param name="checkCondition">Function that will decide about trying again.
+            This method must have 2 parameters with the following types in this order: int, Exception.
+            The first parameter is the number of the current attempt and the second is the caught exception or null. 
+            If this checker method returns with true, the main method returns immediately. 
+            Otherwise the next attempt will be performed.
+            </param>
+        </member>
+        <member name="T:SenseNet.Tools.TypeNotFoundException">
+            <summary>
+            Represents a type loading error.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.TypeNotFoundException.#ctor">
+            <summary>
+            Initializes a new instance of the TypeNotFoundException class.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.TypeNotFoundException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the TypeNotFoundException class.
+            </summary>
+            <param name="typeName">Name of the type that was not found.</param>
+        </member>
+        <member name="M:SenseNet.Tools.TypeNotFoundException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the TypeNotFoundException class.
+            </summary>
+            <param name="typeName">Name of the type that was not found.</param>
+            <param name="inner">Original exception.</param>
+        </member>
+        <member name="M:SenseNet.Tools.TypeNotFoundException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            Initializes a new instance of the TypeNotFoundException class with serialized data.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Tools.TypeResolver">
+            <summary>
+            Provides methods for loading available types in the system.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.CreateInstance``1(System.String)">
+            <summary>
+            Creates an instance of the specified type.
+            </summary>
+            <typeparam name="T">Type of the object to create.</typeparam>
+            <param name="typeName">Name of the type to use.</param>
+            <returns>A newly created object of type T.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.CreateInstance``1(System.String,System.Object[])">
+            <summary>
+            Creates an instance of the specified type.
+            </summary>
+            <typeparam name="T">Type of the object to create.</typeparam>
+            <param name="typeName">Name of the type to use.</param>
+            <param name="args">An array of arguments that match in number, order, and type the parameters 
+            of the constructor to invoke.</param>
+            <returns>A newly created object of type T.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.CreateInstance(System.String)">
+            <summary>
+            Creates an instance of the specified type.
+            </summary>
+            <param name="typeName">Name of the type to use.</param>
+            <returns>A newly created object of the provided type.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.CreateInstance(System.String,System.Object[])">
+            <summary>
+            Creates an instance of the specified type.
+            </summary>
+            <param name="typeName">Name of the type to use.</param>
+            <param name="args">An array of arguments that match in number, order, and type the parameters 
+            of the constructor to invoke.</param>
+            <returns>A newly created object of the provided type.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.GetType(System.String,System.Boolean)">
+            <summary>
+            Loads the type with the specified name. First looks for the type using
+            the built-in Type.GetType method, than (in case it is not found) uses 
+            the type cache and an app domain search as a fallback.
+            </summary>
+            <param name="typeName">Name of the type to load.</param>
+            <param name="throwOnError">Whether to throw an error when a type is not found.</param>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.FindTypeInAppDomain(System.String,System.Boolean)">
+            <summary>
+            Loads the type with the specified name from the type cache or from the current app domain.
+            </summary>
+            <param name="typeName">Name of the type to load.</param>
+            <param name="throwOnError">Whether to throw an error when a type is not found.</param>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.GetAssemblies">
+            <summary>
+            Loads all assemblies in the current app domain.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.LoadAssembliesFrom(System.String)">
+            <summary>
+            Loads all assemblies from the specified file system path.
+            </summary>
+            <param name="path">A file system path where assemblies should be loaded from.</param>
+            <returns>An array of file names of loaded assemblies in the specified folder.</returns>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.GetTypesByInterface(System.Type)">
+            <summary>
+            Loads all types that implement the specified interface.
+            </summary>
+            <param name="interfaceType">Interface type to look for.</param>
+        </member>
+        <member name="M:SenseNet.Tools.TypeResolver.GetTypesByBaseType(System.Type)">
+            <summary>
+            Loads all types that inherit from the specified base type.
+            </summary>
+            <param name="baseType">Base type to look for.</param>
+        </member>
+        <member name="T:SenseNet.Tools.Utility">
+            <summary>
+            A helper class containing common utility methods.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Tools.Utility.Convert">
+            <summary>
+            Contains converter methods.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Tools.Utility.Convert.BytesToLong(System.Byte[])">
+            <summary>
+            Converts an array of bytes to a long value.
+            </summary>
+            <param name="bytes">The byte array to convert.</param>
+        </member>
+        <member name="M:SenseNet.Tools.Utility.Convert.LongToBytes(System.Int64)">
+            <summary>
+            Converts a long value to an array of bytes.
+            </summary>
+            <param name="long">The long value to convert.</param>
+        </member>
+        <member name="M:SenseNet.Tools.Utility.CollectExceptionMessages(System.Exception)">
+            <summary>
+            Walks through an inner exception chain of the provided exception
+            and collects all the messages, properties and stack trace lines
+            into a single string.
+            </summary>
+            <param name="ex">An exception to crawl.</param>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Category">
+            <summary>
+            Contains available values of the Category column.
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.ContentOperation">
+            <summary>ContentOperation category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Database">
+            <summary>Database category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Index">
+            <summary>Index category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.IndexQueue">
+            <summary>IndexQueue category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Query">
+            <summary>Query category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Repository">
+            <summary>Repository category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Messaging">
+            <summary>Messaging category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Security">
+            <summary>Security category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.SecurityQueue">
+            <summary>SecurityQueue category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.System">
+            <summary>System category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Web">
+            <summary>Web category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Workflow">
+            <summary>Workflow category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.TaskManagement">
+            <summary>Workflow category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Test">
+            <summary>Test category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Event">
+            <summary>Event category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Category.Custom">
+            <summary>Custom category</summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.DirectoryReader">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.EntryEnumerable`1">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.FileReader">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Filter`1">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.GenericLinker`1">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.GenericTransformer`1">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Linker`1">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.LinkerState">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Reader">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.SessionReader">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.SessionReaderEnumerator">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Transformer`1">
+            <summary>
+            EXPERIMENTAL FEATURE
+            </summary>
+            <typeparam name="T"></typeparam>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Status">
+            <summary>
+            Contains available values of the Status column.
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Status.Empty">
+            <summary>Value is ""</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Status.Start">
+            <summary>Value is "Start"</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Status.End">
+            <summary>Value is "End"</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Status.Unterminated">
+            <summary>Value is "UNSUCCESSFUL"</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Status.Error">
+            <summary>Value is "ERROR"</summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Entry">
+            <summary>
+            Represents a line in the trace file.
+            EXPERIMENTAL FEATURE
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.Analysis.Entry.Field">
+            <summary>
+            Field index helper
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.LineId">
+            <summary>Value = 0</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.Time">
+            <summary>Value = 1</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.Category">
+            <summary>Value = 2</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.AppDomain">
+            <summary>Value = 3</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.ThreadId">
+            <summary>Value = 4</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.OpId">
+            <summary>Value = 5</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.Status">
+            <summary>Value = 6</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.Duration">
+            <summary>Value = 7</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Field.Message">
+            <summary>Value = 8</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.BlockStart">
+            <summary>
+            True if this line is the first in the block that written to disk in one step.
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.LineId">
+            <summary>
+            Identifier number of the line. Unique is in the AppDomain.
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Time">
+            <summary>
+            Creation time of the line.
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Category">
+            <summary>
+            Trace category
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.AppDomain">
+            <summary>
+            AppDomain name
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.ThreadId">
+            <summary>
+            Current thread id.
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.OpId">
+            <summary>
+            Id of the operation
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Status">
+            <summary>
+            Value can be empty, "Start", "End", "UNTERMINATED" or "ERROR"
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Duration">
+            <summary>
+            Duration if this line is the end of an operation
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Message">
+            <summary>
+            The subject of the line
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.Analysis.Entry.Raw">
+            <summary>
+            Original line data.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.Analysis.Entry.Parse(System.String)">
+            <summary>
+            Creates an SnTraceEntry from one line of the trace file
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.Analysis.Entry.ToString">
+            <summary>
+            Returns a string that represents the current object.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.DebugEventLogger">
+            <summary>
+            Logger implementation for writing messages to the debug trace.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.DebugEventLogger.Write(System.Object,System.Collections.Generic.ICollection{System.String},System.Int32,System.Int32,System.Diagnostics.TraceEventType,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes a message and its properties to the debug trace.
+            </summary>
+            <param name="message">A message to log.</param>
+            <param name="categories">Optional list of log categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="eventId">Event id.</param>
+            <param name="severity">Event type.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Optional list of event properties.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.DebugEventLogger.Write(System.String)">
+            <summary>
+            Writes a message to the debug trace.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.IAuditEvent">
+            <summary>
+            Represents an audit event.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.IAuditEvent.EventId">
+            <summary>
+            Event id.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.IAuditEvent.Message">
+            <summary>
+            Message to log.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.IAuditEvent.Title">
+            <summary>
+            Event title.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.IEventLogger">
+            <summary>
+            Defines an API for logger implementations for writing general event messages. 
+            For verbose logging please use SnTrace instead.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.IEventLogger.Write(System.Object,System.Collections.Generic.ICollection{System.String},System.Int32,System.Int32,System.Diagnostics.TraceEventType,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes a message and its properties to the log.
+            </summary>
+            <param name="message">A message to log.</param>
+            <param name="categories">List of log categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="eventId">Event id.</param>
+            <param name="severity">Event type.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Event properties.</param>
+        </member>
+        <member name="T:SenseNet.Diagnostics.IEventTypeProvider">
+            <summary>
+            Defines an interface for exception types that need to redefine the default
+            severity (Error) when they are logged. Custom exception classes can implement 
+            this interface and override the EventType property to return a different
+            log level - e.g. Warning instead of Error.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.IEventTypeProvider.EventType">
+            <summary>
+            Event level when logging a custom exception. Default: TraceEventType.Error
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.SnEventLogger">
+            <summary>
+            Built-in, lightweight IEventLogger implementation that writes events into the selected and existing windows event log.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnEventLogger.#ctor(System.String,System.String)">
+            <summary>
+            Initializes an instance of the SnEventLogger class by passed logName and logSourceName.
+            The defined log and logsource must be exist.
+            </summary>
+            <param name="logName">Name of the log. Cannot be null or empty.</param>
+            <param name="logSourceName">Name of the log source. Cannot be null or empty.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnEventLogger.Write(System.Object,System.Collections.Generic.ICollection{System.String},System.Int32,System.Int32,System.Diagnostics.TraceEventType,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes a message and its properties to the log.
+            </summary>
+            <param name="message">A message to log.</param>
+            <param name="categories">List of log categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="eventId">Event id.</param>
+            <param name="severity">Event type.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Event properties.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnEventLogger.FormatMessage(System.Object,System.Collections.Generic.ICollection{System.String},System.Int32,System.Int32,System.Diagnostics.TraceEventType,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Returns a formatted string representation of the whole log entry by the passed parameters.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnEventLogger.FormatCategories(System.Collections.Generic.ICollection{System.String})">
+            <summary>
+            Returns a formatted string representation of the categories.
+            Currently it is a comma separated list of the passed categories.
+            If the list is null or empty, the value is "General".
+            </summary>
+            <param name="categories">Category collection. Can be null or empty.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnEventLogger.FormatProperties(System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Returns a formattedd string representation of the passedd properties.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.SnLog">
+            <summary>
+            Main logger API for writing events on different levels (e.g. Warning, Error).
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnLog.Instance">
+            <summary>
+            Logger instance used by the dedicated static methods. Set this property
+            once when your application starts.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnLog.WriteException(System.Exception,System.String,System.Int32,System.Collections.Generic.IEnumerable{System.String},System.Int32,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes an exception to the log. All the inner exceptions will be extracted and logged too.
+            </summary>
+            <param name="exception">The exception to log.</param>
+            <param name="message">Event message.</param>
+            <param name="eventId">Event id.</param>
+            <param name="categories">List of event categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Event properties.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnLog.WriteError(System.Object,System.Int32,System.Collections.Generic.IEnumerable{System.String},System.Int32,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes an error message to the log.
+            </summary>
+            <param name="message">Event message.</param>
+            <param name="eventId">Event id.</param>
+            <param name="categories">List of event categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Event properties.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnLog.WriteWarning(System.Object,System.Int32,System.Collections.Generic.IEnumerable{System.String},System.Int32,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes a warning message to the log.
+            </summary>
+            <param name="message">Event message.</param>
+            <param name="eventId">Event id.</param>
+            <param name="categories">List of event categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Event properties.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnLog.WriteInformation(System.Object,System.Int32,System.Collections.Generic.IEnumerable{System.String},System.Int32,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes an information message to the log.
+            </summary>
+            <param name="message">Event message.</param>
+            <param name="eventId">Event id.</param>
+            <param name="categories">List of event categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Event properties.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnLog.WriteAudit(SenseNet.Diagnostics.IAuditEvent,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes an audit message to the log. Event level will be Verbose; it is 
+            the responsibility of the logger to channel this event to the appropriate 
+            log storage based on the provided category.
+            </summary>
+            <param name="auditEvent">An object that represents an audit event.</param>
+            <param name="properties">Event properties.</param>
+        </member>
+        <member name="T:SenseNet.Diagnostics.SnTrace">
+            <summary>
+            Efficient and scalable tracing component. Provides methods for recording 
+            verbose information about the running system. Collects messages into a buffer 
+            and writes them to the file system periodically.
+            This class cannot be inherited.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.SnTrace.Operation">
+            <summary>
+            Represents an execution block that needs a start and finish log message
+            regardless of whether the execution was successful or not. The two
+            messages can be associated by their common operation id. 
+            Setting the Successful property to true is mandatory when the execution
+            was successful - otherwise the logger would assume that the operation failed.
+            Tipical usage:
+            using (var op = SnTrace.StartOperation("message")) { ...; op.Successful = true; }
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnTrace.Operation.Id">
+            <summary>
+            Gets the operation identifier that is unique in the current AppDomain.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnTrace.Operation.Category">
+            <summary>
+            Gets the category name.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnTrace.Operation.StartedAt">
+            <summary>
+            Gets the time when the operation started.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnTrace.Operation.Message">
+            <summary>
+            Gets the operation message that is written at start and at the end.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnTrace.Operation.Successful">
+            <summary>
+            Gets or sets a value indicating whether the operation is finished correctly.
+            Always set this flag to true when the code block executed correctly.
+            Default is false.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.Operation.Dispose">
+            <summary>
+            Finishes the operation and writes the trace line containing the message and the running time.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.Operation.Dispose(System.Boolean)">
+            <summary>
+            Releases the unmanaged resources used by the Operation object and optionally releases the managed resources.
+            </summary>
+            <param name="disposing">True to release both managed and unmanaged resources or false to release only unmanaged resources.</param>
+        </member>
+        <member name="T:SenseNet.Diagnostics.SnTrace.SnTraceCategory">
+            <summary>
+            Represents an SnTrace category. It helps differentiating trace lines 
+            that are generated by different features.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnTrace.SnTraceCategory.Name">
+            <summary>
+            Gets the name of the category.
+            </summary>
+        </member>
+        <member name="P:SenseNet.Diagnostics.SnTrace.SnTraceCategory.Enabled">
+            <summary>
+            Gets or sets whether the category is enabled or not. Messages sent to 
+            a disabled category will not be writted to the trace log.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.SnTraceCategory.StartOperation(System.String,System.Object[])">
+            <summary>
+            Starts a traced operation in the current category. The message will be written 
+            to the trace with smart formatting.
+            </summary>
+            <param name="message">Message template that works as a composite format string (see string.Format method).</param>
+            <param name="args">Parameters that will be substituted into the message template.
+            Null values will be written as "null". IEnumerable values will be written as comma separated lists.
+            All control characters (including tabs, return and line feed) are changed to '.'
+            </param>
+            <returns>A disposable operation object usually encapsulated in a using block.</returns>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.SnTraceCategory.Write(System.String,System.Object[])">
+            <summary>
+            Writes a line to the trace with the current category. The message will be written with smart formatting.
+            </summary>
+            <param name="message">Message template that works as a composite format string (see string.Format method).</param>
+            <param name="args">Parameters that will be substituted into the message template.
+            Null values will be written as "null". IEnumerable values will be written as comma separated lists.
+            All control characters (including tabs, return and line feed) are changed to '.'
+            </param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.SnTraceCategory.WriteError(System.String,System.Object[])">
+            <summary>
+            Writes an error line to the trace with the current category. The message will be written with smart formatting.
+            </summary>
+            <param name="message">Message template that works as a composite format string (see string.Format method).</param>
+            <param name="args">Parameters that will be substituted into the message template.
+            Null values will be written as "null". IEnumerable values will be written as comma separated lists.
+            All control characters (including tabs, return and line feed) are changed to '.'
+            </param>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.ContentOperation">
+            <summary>ContentOperation category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Database">
+            <summary>Database category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Index">
+            <summary>Index category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.IndexQueue">
+            <summary>IndexQueue category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Query">
+            <summary>Query category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Repository">
+            <summary>Repository category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Messaging">
+            <summary>Messaging category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Security">
+            <summary>Security category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.SecurityQueue">
+            <summary>SecurityQueue category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.System">
+            <summary>System category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Web">
+            <summary>Web category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Workflow">
+            <summary>Workflow category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.TaskManagement">
+            <summary>TaskManagement category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Test">
+            <summary>Test category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Event">
+            <summary>Event category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Custom">
+            <summary>Custom category</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace.Categories">
+            <summary>
+            Contains all SnTrace categories to help enumerate them.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.Category(System.String)">
+            <summary>
+            Creates a dynamic trace category.
+            </summary>
+            <param name="name">Category name.</param>
+            <returns>A category object that is enabled (meaning messages written into it will be persisted) if the Custom category is enabled.</returns>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.StartOperation(System.String,System.Object[])">
+            <summary>
+             Starts a traced operation in the "Custom" category. The message will be written to the trace with smart formatting.
+            </summary>
+            <param name="message">Message template that works as a composite format string (see string.Format method).</param>
+            <param name="args">Parameters that will be substituted into the message template.
+            Null values will be written as "null". IEnumerable values will be written as comma separated lists.
+            All control characters (including tabs, return and line feed) are changed to '.'
+            </param>
+            <returns></returns>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.Write(System.String,System.Object[])">
+            <summary>
+            Writes a line to the trace in the "Custom" category. The message will be written with smart formatting.
+            </summary>
+            <param name="message">Message template that works as a composite format string (see string.Format method).</param>
+            <param name="args">Parameters that will be substituted into the message template.
+            Null values will be written as "null". IEnumerable values will be written as comma separated lists.
+            All control characters (including tabs, return and line feed) are changed to '.'
+            </param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.WriteError(System.String,System.Object[])">
+            <summary>
+            Writes an error line to the trace in the "Custom" category. The message will be written with smart formatting.
+            </summary>
+            <param name="message">Message template that works as a composite format string (see string.Format method).</param>
+            <param name="args">Parameters that will be substituted into the message template.
+            Null values will be written as "null". IEnumerable values will be written as comma separated lists.
+            All control characters (including tabs, return and line feed) are changed to '.'
+            </param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.EnableAll">
+            <summary>
+            Enables all categories.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.DisableAll">
+            <summary>
+            Disables all categories.
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.SnTrace._maxPdiff">
+            <summary>Statistical data: the longest gap between p0 and p1</summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.GetRelativeLogDirectory(System.String)">
+            <summary>
+            Extends the given directory with the partial path of the detailed log directory ("App_Data\DetailedLog")
+            </summary>
+            <param name="baseDirectoryPath">Directory that will contain the log directory</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.SnTrace.Flush">
+            <summary>
+            Writes any buffered data to the underlying device and empties the internal buffer.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.TraceEventLogger">
+            <summary>
+            Logger implementation for writing messages to the trace.
+            </summary>
+        </member>
+        <member name="M:SenseNet.Diagnostics.TraceEventLogger.Write(System.Object,System.Collections.Generic.ICollection{System.String},System.Int32,System.Int32,System.Diagnostics.TraceEventType,System.String,System.Collections.Generic.IDictionary{System.String,System.Object})">
+            <summary>
+            Writes a message and its properties to the trace.
+            </summary>
+            <param name="message">A message to log.</param>
+            <param name="categories">Optional list of log categories.</param>
+            <param name="priority">Event priority.</param>
+            <param name="eventId">Event id.</param>
+            <param name="severity">Event type.</param>
+            <param name="title">Event title.</param>
+            <param name="properties">Optional list of event properties.</param>
+        </member>
+        <member name="M:SenseNet.Diagnostics.TraceEventLogger.Write(System.String)">
+            <summary>
+            Writes a message to the trace.
+            </summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.EventId">
+            <summary>
+            Contains all event ids in Sense/Net ECM including satellite applications and external components.
+            In your custom code please consider defining custom event ids and use these built-in values only 
+            if the event is truly related to the feature it is defined for.
+            </summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.NotDefined">
+            <summary>General, not classified event. Value: 1.</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.NotSupported">
+            <summary>Event if the feature is not supported in the current context. Value: 10.</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Serialization">
+            <summary>Serialization / deserialization related event. Value: 11</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.RepositoryRuntime">
+            <summary>General event for the Content Repository. Value: 20</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.RepositoryLifecycle">
+            <summary>Event during starting and stopping the Content Repository. Value:21</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Messaging">
+            <summary>Messaging related event. Used when communicating with other app domains. Value: 30</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Security">
+            <summary>Security related event. Value: 40</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Indexing">
+            <summary>Lucene indexing related event. Value: 50</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Querying">
+            <summary>Content Query related event. Value: 60</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.ActionFramework">
+            <summary>ActionFramework related event. Value: 70</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.DirectoryServices">
+            <summary>DirectoryServices (AdSync) related event. Value: 80</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Packaging">
+            <summary>Packaging (SnAdmin) related event. Value: 90</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.TreeLock">
+            <summary>TreeLock related event. Value: 100</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Transaction">
+            <summary>Transaction related event. Value: 110</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Portal">
+            <summary>Portal component (e.g. Portlet, ContentView etc.) related event. Value: 120</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Services">
+            <summary>Service related event. Value: 130</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.LoadTest">
+            <summary>Load test event. Value: 140</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.ClientEvent">
+            <summary>SenseNet.Client related event. Value: 150</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.Preview">
+            <summary>Preview generation related event. Value: 160</summary>
+        </member>
+        <member name="T:SenseNet.Diagnostics.EventId.TaskManagement">
+            <summary>Contains Task Management related event ids.</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.TaskManagement.General">
+            <summary>General task management event. Value: 500</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.TaskManagement.Lifecycle">
+            <summary>Events during starting or stopping any task management related component. Value: 510</summary>
+        </member>
+        <member name="F:SenseNet.Diagnostics.EventId.TaskManagement.Communication">
+            <summary>Any communication related event in task management. Value: 520</summary>
+        </member>
+    </members>
+</doc>
