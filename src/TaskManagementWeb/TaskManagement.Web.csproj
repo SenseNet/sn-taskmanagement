@@ -126,6 +126,7 @@
     <Content Include="Global.asax" />
     <None Include="deployment.txt" />
     <None Include="Properties\PublishProfiles\TaskManagement.pubxml" />
+    <Content Include="README.md" />
     <None Include="Scripts\jquery-1.6.4-vsdoc.js" />
     <Content Include="index.html" />
     <Content Include="license.txt" />
