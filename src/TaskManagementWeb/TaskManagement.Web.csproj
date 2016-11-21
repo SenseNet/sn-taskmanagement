@@ -128,7 +128,6 @@
     <Content Include="README.md" />
     <None Include="Scripts\jquery-1.6.4-vsdoc.js" />
     <Content Include="index.html" />
-    <Content Include="license.txt" />
     <Content Include="Scripts\jquery-1.6.4.js" />
     <Content Include="Scripts\jquery-1.6.4.min.js" />
     <Content Include="Scripts\jquery.signalR-2.2.0.js" />
