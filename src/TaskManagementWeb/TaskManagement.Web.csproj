@@ -133,6 +133,16 @@
     <Content Include="Scripts\jquery-1.6.4.min.js" />
     <Content Include="Scripts\jquery.signalR-2.2.0.js" />
     <Content Include="Scripts\jquery.signalR-2.2.0.min.js" />
+    <Content Include="TaskManagement\Microsoft.AspNet.SignalR.Client.dll" />
+    <Content Include="TaskManagement\Newtonsoft.Json.dll" />
+    <Content Include="TaskManagement\SenseNet.TaskManagement.Core.dll" />
+    <Content Include="TaskManagement\SenseNet.TaskManagement.Core.pdb" />
+    <Content Include="TaskManagement\SenseNet.Tools.dll" />
+    <Content Include="TaskManagement\SenseNet.Tools.pdb" />
+    <Content Include="TaskManagement\SenseNetTaskAgent.exe" />
+    <Content Include="TaskManagement\SenseNetTaskAgent.pdb" />
+    <Content Include="TaskManagement\SenseNetTaskAgentService.exe" />
+    <Content Include="TaskManagement\SenseNetTaskAgentService.pdb" />
     <Content Include="TaskManagement\TaskExecutors\readme.txt" />
     <Content Include="Web.config">
       <SubType>Designer</SubType>
@@ -160,6 +170,8 @@
     <Content Include="packages.config">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="TaskManagement\SenseNetTaskAgent.exe.config" />
+    <Content Include="TaskManagement\SenseNetTaskAgentService.exe.config" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
