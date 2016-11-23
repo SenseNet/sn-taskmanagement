@@ -1,6 +1,7 @@
-# SenseNet Task Management
+# Sense/Net Task Management
 
 [![Join the chat at https://gitter.im/SenseNet/sn-taskmanagement](https://badges.gitter.im/SenseNet/sn-taskmanagement.svg)](https://gitter.im/SenseNet/sn-taskmanagement?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![NuGet](https://img.shields.io/nuget/v/SenseNet.TaskManagement.Core.svg)](https://www.nuget.org/packages/SenseNet.TaskManagement.Core)
 
 Task Management is a .Net component for managing **long-running background tasks** in any application. It is a robust and **scalable** solution that is **extendable** with **3rd party task executors** designed for solving atomic background tasks (e.g. extracting a compressed file or generating preview images for a document).
 
@@ -9,7 +10,7 @@ Task Management is a .Net component for managing **long-running background tasks
 - Fully scalable, as you can deploy any number of agent machines to be able to perform more tasks at the samwe time.
 - It is able to provide rich progress information about running tasks.
 
-This project was developed as a supporting component for [SenseNet](https://github.com/SenseNet/sensenet), but can be used in conjunction with any application!
+This project was developed as a supporting component for [Sense/Net ECM](https://github.com/SenseNet/sensenet), but can be used in conjunction with any application!
 
 ## Overview
 Task Management consists of the following subcomponents:

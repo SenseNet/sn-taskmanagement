@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+    <metadata>
+        <id>SenseNet.TaskManagement.Core</id>
+        <version>1.1.0.0</version>
+        <title>Sense/Net TaskManagement Core</title>
+        <authors>Sense/Net</authors>
+        <owners>Sense/Net</owners>
+        <licenseUrl>https://github.com/SenseNet/sn-taskmanagement/blob/master/LICENSE</licenseUrl>
+        <projectUrl>https://github.com/SenseNet/sn-taskmanagement</projectUrl>
+        <iconUrl>https://avatars2.githubusercontent.com/u/4069121?v=3&amp;s=200</iconUrl>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>A standalone .Net component for managing long-running background tasks in any application.</description>
+        <releaseNotes>Initial release.</releaseNotes>
+        <copyright>Copyright © Sense/Net Inc.</copyright>
+        <language>en-US</language>
+        <tags>sensenet task taskmanagement background longrunning</tags>
+        <dependencies>
+            <group targetFramework=".NETFramework4.5">
+                <dependency id="Newtonsoft.Json" version="9.0.1" />
+                <dependency id="SenseNet.Tools" version="2.1" />
+            </group>
+        </dependencies>
+    </metadata>
+    <files>
+        <file src="bin\Release\SenseNet.TaskManagement.Core.dll" target="lib\net45\SenseNet.TaskManagement.Core.dll" />
+        <file src="bin\Release\SenseNet.TaskManagement.Core.pdb" target="lib\net45\SenseNet.TaskManagement.Core.pdb" />
+        <file src="bin\Release\SenseNet.TaskManagement.Core.XML" target="lib\net45\SenseNet.TaskManagement.Core.XML" />
+    </files>
+</package>
