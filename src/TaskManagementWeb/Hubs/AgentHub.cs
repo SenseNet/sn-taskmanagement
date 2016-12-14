@@ -77,8 +77,9 @@ namespace SenseNet.TaskManagement.Hubs
                     return;
                 }
 
+                bool applicationNeedsNotification = string.IsNullOrWhiteSpace(taskResult.Task.FinalizeUrl) ? false : true;
                 // first we make sure that the app is accessible by sending a ping request
-                if (!ApplicationHandler.SendPingRequest(taskResult.Task.AppId))
+                if (applicationNeedsNotification && !ApplicationHandler.SendPingRequest(taskResult.Task.AppId))
                 {
                     var app = ApplicationHandler.GetApplication(taskResult.Task.AppId);
 
@@ -90,7 +91,7 @@ namespace SenseNet.TaskManagement.Hubs
                         taskResult.Error == null ? "-" : taskResult.Error.ToString()),
                         EventId.TaskManagement.Communication);
 
-                    return;
+                    applicationNeedsNotification = false;
                 }
 
                 // remove the task from the database first
@@ -100,7 +101,10 @@ namespace SenseNet.TaskManagement.Hubs
 
                 // This method does not need to be awaited, because we do not want to do anything 
                 // with the result, only notify the app that the task has been finished.
-                ApplicationHandler.SendFinalizeNotificationAsync(taskResult);
+                if (applicationNeedsNotification)
+                {
+                    ApplicationHandler.SendFinalizeNotificationAsync(taskResult);
+                }
 
                 // notify monitors
                 TaskMonitorHub.OnTaskEvent(taskResult.Successful
