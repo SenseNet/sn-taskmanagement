@@ -77,9 +77,9 @@ namespace SenseNet.TaskManagement.Hubs
                     return;
                 }
 
-                bool applicationNeedsNotification = string.IsNullOrWhiteSpace(taskResult.Task.FinalizeUrl) ? false : true;
+                var doesApplicationNeedNotification = !string.IsNullOrWhiteSpace(taskResult.Task.GetFinalizeUrl());
                 // first we make sure that the app is accessible by sending a ping request
-                if (applicationNeedsNotification && !ApplicationHandler.SendPingRequest(taskResult.Task.AppId))
+                if (doesApplicationNeedNotification && !ApplicationHandler.SendPingRequest(taskResult.Task.AppId))
                 {
                     var app = ApplicationHandler.GetApplication(taskResult.Task.AppId);
 
@@ -91,7 +91,7 @@ namespace SenseNet.TaskManagement.Hubs
                         taskResult.Error == null ? "-" : taskResult.Error.ToString()),
                         EventId.TaskManagement.Communication);
 
-                    applicationNeedsNotification = false;
+                    doesApplicationNeedNotification = false;
                 }
 
                 // remove the task from the database first
@@ -99,10 +99,10 @@ namespace SenseNet.TaskManagement.Hubs
 
                 SnTrace.TaskManagement.Write("AgentHub TaskFinished: task {0} has been deleted.", taskResult.Task.Id);
 
-                // This method does not need to be awaited, because we do not want to do anything 
-                // with the result, only notify the app that the task has been finished.
-                if (applicationNeedsNotification)
+                if (doesApplicationNeedNotification)
                 {
+                    // This method does not need to be awaited, because we do not want to do anything 
+                    // with the result, only notify the app that the task has been finished.
                     ApplicationHandler.SendFinalizeNotificationAsync(taskResult);
                 }
 
