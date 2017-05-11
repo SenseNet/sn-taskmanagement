@@ -32,7 +32,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Ap
 BEGIN
 CREATE TABLE [dbo].[Applications](
 	[Id] [int] IDENTITY(1,1) NOT NULL,
-	[AppId] [nvarchar](50) NOT NULL,
+	[AppId] [nvarchar](450) NOT NULL,
 	[AppData] [nvarchar](max) NULL,
 	[RegistrationDate] [datetime2](7) NOT NULL,
 	[LastUpdateDate] [datetime2](7) NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE [dbo].[Tasks](
 	[Order] [float] NOT NULL,
 	[Tag] [nvarchar](450) NULL,
 	[RegisteredAt] [datetime] NOT NULL,
-	[AppId] [nvarchar](50) NULL,
+	[AppId] [nvarchar](450) NULL,
 	[FinalizeUrl] [nvarchar](max) NULL,
 	[LastLockUpdate] [datetime] NULL,
 	[LockedBy] [nvarchar](450) NULL,
@@ -101,7 +101,7 @@ CREATE TABLE [dbo].[TaskEvents](
 	[Title] [nvarchar](250) NOT NULL,
 	[Tag] [nvarchar](450) NULL,
 	[Details] [nvarchar](max) NULL,
-	[AppId] [nvarchar](50) NULL,
+	[AppId] [nvarchar](450) NULL,
 	[Machine] [nvarchar](50) NULL,
 	[Agent] [nvarchar](50) NULL,
 	[TaskId] [int] NULL,
