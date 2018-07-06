@@ -105,9 +105,9 @@
     <Content Include="sn.ico" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\TaskManagement.Core\TaskManagement.Core.csproj">
+    <ProjectReference Include="..\TaskManagement.Core\SenseNet.TaskManagement.Core.csproj">
       <Project>{e8335731-1e4f-4dac-99ed-cd9bccf686cb}</Project>
-      <Name>TaskManagement.Core</Name>
+      <Name>SenseNet.TaskManagement.Core</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

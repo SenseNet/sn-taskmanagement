@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>SenseNet.TaskManagement.Core</RootNamespace>
+    <PackageId>SenseNet.TaskManagement.Core</PackageId>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <Version>2.0</Version>
+    <Company>Sense/Net Inc.</Company>
+    <Description>A standalone .Net component for managing long-running background tasks in any application.</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageProjectUrl>https://github.com/SenseNet/sn-taskmanagement</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/SenseNet/sn-taskmanagement/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/SenseNet/sn-taskmanagement.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>See release notes on GitHub.</PackageReleaseNotes>
+    <PackageTags>sensenet task taskmanagement background longrunning</PackageTags>
+    <PackageIconUrl>https://raw.githubusercontent.com/SenseNet/sn-resources/master/images/sn-icon/sensenet-icon-64.png</PackageIconUrl>
+    <Authors>kavics,tusmester</Authors>
+    <Copyright>Copyright © Sense/Net Inc.</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\SenseNet.TaskManagement.Core.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="SenseNet.Tools" Version="3.0.0" />
+  </ItemGroup>
+
+</Project>
