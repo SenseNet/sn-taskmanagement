@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2036
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Web", "TaskManagementWeb\TaskManagement.Web.csproj", "{3C8583A1-B19B-4664-A957-F1514D21ECF6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Core", "TaskManagement.Core\TaskManagement.Core.csproj", "{E8335731-1E4F-4DAC-99ED-CD9BCCF686CB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SenseNet.TaskManagement.Core", "TaskManagement.Core\SenseNet.TaskManagement.Core.csproj", "{E8335731-1E4F-4DAC-99ED-CD9BCCF686CB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SenseNetTaskAgent", "SenseNetTaskAgent\SenseNetTaskAgent.csproj", "{AB82332D-9A17-4E1F-B847-74FC7C74E21F}"
 EndProject
@@ -53,5 +53,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3DE66364-19C5-40C1-AB44-9AE45C7F8078}
 	EndGlobalSection
 EndGlobal

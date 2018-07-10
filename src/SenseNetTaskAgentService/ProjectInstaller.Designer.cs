@@ -39,7 +39,7 @@
             // 
             // serviceInstaller1
             // 
-            this.serviceInstaller1.Description = "Agent service for executing Sense/Net distributed tasks.";
+            this.serviceInstaller1.Description = "Agent service for executing sensenet distributed tasks.";
             this.serviceInstaller1.ServiceName = "SenseNetTaskAgentService";
             this.serviceInstaller1.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
             // 
