@@ -42,7 +42,23 @@ namespace SenseNet.TaskManagement.TaskAgent
                 return _taskManagementUrl;
             }
         }
-
+        private const string SCHUSESTRONGCRYPTO = "SchUseStrongCrypto";
+        private static bool? _SchUseStrongCrypto;
+        public static bool SchUseStrongCrypto
+        {
+            get
+            {
+              
+                if (_SchUseStrongCrypto == null)
+                {
+                    string SCHUSESTRONGCRYPTOSTRINGVAL = ConfigurationManager.AppSettings[SCHUSESTRONGCRYPTO];
+                    bool result = false;
+                    bool.TryParse(SCHUSESTRONGCRYPTOSTRINGVAL, out result);
+                    _SchUseStrongCrypto = result;
+                }
+                return _SchUseStrongCrypto.HasValue && _SchUseStrongCrypto.Value;
+            }
+        }
         private const string USERNAMEKEY = "Username";
         private static string _username;
         public static string Username

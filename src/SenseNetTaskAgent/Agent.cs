@@ -70,7 +70,10 @@ namespace SenseNet.TaskManagement.TaskAgent
             SnLog.Instance = new SnEventLogger(Configuration.LogName, Configuration.LogSourceName);
 
             _agentName = AgentManager.GetAgentName();
-
+            if (Configuration.SchUseStrongCrypto)
+            {
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+            }
             try
             {
                 DiscoverCapabilities();
