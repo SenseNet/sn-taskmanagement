@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -125,6 +126,7 @@ namespace SenseNet.TaskManagement.Core
 
         private static async Task<HttpResponseMessage> SendRequest(string taskManagementUrl, object postData, string apiUrl)
         {
+            ServicePointManager.SecurityProtocol = ServicePointManager.SecurityProtocol | SecurityProtocolType.Tls12;
             using (var client = new HttpClient())
             {
                 // set client properties
