@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -105,6 +105,8 @@ namespace SenseNet.TaskManagement.Core
             HttpResponseMessage response = null;
             var responseText = string.Empty;
 
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+
             try
             {
                 response = await SendRequest(taskManagementUrl, requestData, APIURL_REGISTERAPP).ConfigureAwait(false);
@@ -125,8 +127,7 @@ namespace SenseNet.TaskManagement.Core
         //=========================================================================================== Helper methods
 
         private static async Task<HttpResponseMessage> SendRequest(string taskManagementUrl, object postData, string apiUrl)
-        {
-            ServicePointManager.SecurityProtocol = ServicePointManager.SecurityProtocol | SecurityProtocolType.Tls12;
+        {            
             using (var client = new HttpClient())
             {
                 // set client properties
