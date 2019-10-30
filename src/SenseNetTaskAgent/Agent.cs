@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.AspNet.SignalR.Client;
 using System;
 using System.Collections.Generic;
@@ -70,10 +70,9 @@ namespace SenseNet.TaskManagement.TaskAgent
             SnLog.Instance = new SnEventLogger(Configuration.LogName, Configuration.LogSourceName);
 
             _agentName = AgentManager.GetAgentName();
-            if (Configuration.SchUseStrongCrypto)
-            {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            }
+
+            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+
             try
             {
                 DiscoverCapabilities();
