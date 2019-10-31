@@ -7,7 +7,7 @@ Task Management is a .Net component for managing **long-running background tasks
 
 - Takes off the load from web servers (because they are for serving client requests, not for performing resource-heavy tasks).
 - Prevents the web process from crushing in case of 3rd party plugins (e.g. an out of memory issue with a text extractor tool should not kill the web process).
-- Fully scalable, as you can deploy any number of agent machines to be able to perform more tasks at the samwe time.
+- Fully scalable, as you can deploy any number of agent machines to be able to perform more tasks at the same time.
 - It is able to provide rich progress information about running tasks.
 
 This project was developed as a supporting component for [sensenet ECM](https://github.com/SenseNet/sensenet), but can be used in conjunction with any application!
