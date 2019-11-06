@@ -1087,7 +1087,7 @@
         </member>
         <member name="T:SenseNet.Diagnostics.EventId">
             <summary>
-            Contains all event ids in Sense/Net ECM including satellite applications and external components.
+            Contains all event ids in sensenet including satellite applications and external components.
             In your custom code please consider defining custom event ids and use these built-in values only 
             if the event is truly related to the feature it is defined for.
             </summary>
