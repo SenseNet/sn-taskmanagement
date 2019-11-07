@@ -1,4 +1,4 @@
-﻿using SenseNet.TaskManagement.Core.Configuration;
+using SenseNet.TaskManagement.Core.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Configuration;

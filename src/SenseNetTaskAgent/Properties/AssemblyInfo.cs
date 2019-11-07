@@ -20,7 +20,8 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 [assembly: Guid("8497a5fc-d0da-457f-ae92-3a15feaee32e")]
 
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.2.1")]
+[assembly: AssemblyFileVersion("1.2.1")]
+[assembly: AssemblyInformationalVersion("1.2.1")]
 
 [assembly: InternalsVisibleTo("SenseNet.TaskManagement.Tests")]
