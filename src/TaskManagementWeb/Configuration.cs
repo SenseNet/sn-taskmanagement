@@ -7,6 +7,7 @@ using SenseNet.TaskManagement.Core.Configuration;
 
 namespace SenseNet.TaskManagement.Web
 {
+    //UNDONE: modernize configuration handling
     internal static class Configuration
     {
         private static readonly string TaskDatabaseConnectrionStringKey = "TaskDatabase";
@@ -27,6 +28,7 @@ namespace SenseNet.TaskManagement.Web
 
                 return _taskDatabaseConnectionString;
             }
+            set => _taskDatabaseConnectionString = value;
         }
 
         private static bool? _signalRSqlEnabled;

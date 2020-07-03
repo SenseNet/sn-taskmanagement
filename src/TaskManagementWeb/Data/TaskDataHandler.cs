@@ -146,7 +146,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             try
             {
-                using (var cn = new SqlConnection(Configuration.ConnectionString))
+                using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
                 using (var cm = cn.CreateCommand())
                 {
                     cm.CommandType = CommandType.Text;
@@ -182,7 +182,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             try
             {
-                using (var cn = new SqlConnection(Configuration.ConnectionString))
+                using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
                 using (var cm = cn.CreateCommand())
                 {
                     cm.CommandType = CommandType.Text;
@@ -279,7 +279,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         }
         private static RegisterTaskResult RegisterTask(string type, string title, double order, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             {
                 cn.Open();
                 var tran = cn.BeginTransaction();
@@ -360,7 +360,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         {
             SnTrace.TaskManagement.Write("TaskDataHandler FinalizeTask: " + (taskResult.Successful ? "Done" : "Error") + ", Id: " + taskResult.Task.Id);
 
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(DELETETASKSQL, cn) { CommandType = System.Data.CommandType.Text })
             {
                 cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskResult.Task.Id;
@@ -372,7 +372,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         public static void RefreshLock(int taskId)
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(REFRESHLOCKSQL, cn) { CommandType = System.Data.CommandType.Text })
             {
                 cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskId;
@@ -384,11 +384,11 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         public static SnTask GetNextAndLock(string machineName, string agentName, string[] capabilities)
         {
             var sql = String.Format(GETANDLOCKSQL, String.Join("', '", capabilities));
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(sql, cn) { CommandType = System.Data.CommandType.Text })
             {
                 cm.Parameters.Add("@LockedBy", SqlDbType.NVarChar, 450).Value = agentName;
-                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Configuration.TaskExecutionTimeoutInSeconds);
+                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Web.Configuration.TaskExecutionTimeoutInSeconds);
 
                 cn.Open();
                 var reader = cm.ExecuteReader();
@@ -417,10 +417,10 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         }
         public static int GetDeadTaskCount()
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(GETDEADTASKSSQL, cn) { CommandType = System.Data.CommandType.Text })
             {
-                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Configuration.TaskExecutionTimeoutInSeconds);
+                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Web.Configuration.TaskExecutionTimeoutInSeconds);
                 cn.Open();
                 var result = (int)cm.ExecuteScalar();
                 SnTrace.TaskManagement.Write("TaskDataHandler GetDeadTasks. Count: " + result);
@@ -441,7 +441,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         public static Application RegisterApplication(RegisterApplicationRequest request)
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             {
                 SqlCommand cm1 = null;
 
@@ -500,24 +500,21 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         public static Application[] Getapplications()
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
-            {
-                using (var cm = cn.CreateCommand())
-                {
-                    cm.CommandType = CommandType.Text;
-                    cm.CommandText = LOADAPPLICATIONSSQL;
+            using var cn = new SqlConnection(Web.Configuration.ConnectionString);
+            using var cm = cn.CreateCommand();
 
-                    cn.Open();
+            cm.CommandType = CommandType.Text;
+            cm.CommandText = LOADAPPLICATIONSSQL;
 
-                    var reader = cm.ExecuteReader();
-                    var result = new List<Application>();
+            cn.Open();
 
-                    while (reader.Read())
-                        result.Add(GetApplicationFromReader(reader));
+            var reader = cm.ExecuteReader();
+            var result = new List<Application>();
 
-                    return result.ToArray();
-                }
-            }
+            while (reader.Read())
+                result.Add(GetApplicationFromReader(reader));
+
+            return result.ToArray();
         }
 
         private static Application GetApplicationFromReader(SqlDataReader reader)
@@ -594,7 +591,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             SqlConnection cn = null;
             if (cm == null)
             {
-                cn = new SqlConnection(Configuration.ConnectionString);
+                cn = new SqlConnection(Web.Configuration.ConnectionString);
                 cm = cn.CreateCommand();
                 cm.Connection = cn;
                 cn.Open();

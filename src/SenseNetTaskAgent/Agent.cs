@@ -1,5 +1,5 @@
 using System.Reflection;
-using Microsoft.AspNet.SignalR.Client;
+using Microsoft.AspNetCore.SignalR.Client;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,6 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
@@ -31,7 +32,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         private static ServerContext _serverContext = new ServerContext { ServerType = ServerType.Distributed };
 
         private static HubConnection _hubConnection;
-        private static IHubProxy _hubProxy;
+        //private static IHubProxy _hubProxy;
 
         private static Dictionary<string, string> _executorVersions;
         private static Dictionary<string, string> TaskExecutorVersions
@@ -65,9 +66,18 @@ namespace SenseNet.TaskManagement.TaskAgent
         }
  
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            SnLog.Instance = new SnEventLogger(Configuration.LogName, Configuration.LogSourceName);
+            //UNDONE: bind and use configuration
+            IConfiguration config = new ConfigurationBuilder()
+                .AddJsonFile("appsettings.json", true, true)
+                .Build();
+
+            Configuration.TaskManagementUrl = config["sensenet:TaskManagementUrl"];
+
+            //SnLog.Instance = new SnEventLogger(Configuration.LogName, Configuration.LogSourceName);
+            SnLog.Instance = new SnFileSystemEventLogger();
+            SnTrace.SnTracers.Add(new SnFileSystemTracer());
 
             _agentName = AgentManager.GetAgentName();
 
@@ -83,7 +93,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                 _watchExecutorPeriodInMilliseconds = Configuration.ExecutorTimeoutInSeconds * 1000;
                 _watchExecutorTimer = new Timer(new TimerCallback(WatchExecutorTimerElapsed));
 
-                var started = StartSignalR();
+                var started = await StartSignalR();
 
                 // check for updates before any other operation
                 if (started && IsUpdateAvailable())
@@ -91,7 +101,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                     StartUpdaterAndExit();
 
                     // exit only if the update really started (it is possible that there
-                    // will be no update becaue the updater tool is missing)
+                    // will be no update because the updater tool is missing)
                     if (_updateStarted)
                         return;
                 }
@@ -103,14 +113,15 @@ namespace SenseNet.TaskManagement.TaskAgent
                 //_updateTimer = new Timer(UpdateTimerElapsed, null, 500, 30000);
 
                 if (started)
-                    Work();
+                    WorkAsync();
                 else
                     _reconnecting = true;
 
                 Console.WriteLine("Press <enter> to exit...");
                 Console.ReadLine();
 
-                _hubConnection.Dispose();
+                //UNDONE: connection dispose
+                //_hubConnection.Dispose();
             }
             catch (Exception ex)
             {
@@ -149,45 +160,59 @@ namespace SenseNet.TaskManagement.TaskAgent
             return TaskManagement.TaskAgent.Tools.GetExecutorExeName(name);
         }
                 
-        private static bool StartSignalR()
+        private static async Task<bool> StartSignalR()
         {
-            _hubConnection = new HubConnection(Configuration.TaskManagementUrl);
-            _hubConnection.DeadlockErrorTimeout = new TimeSpan(0, 1, 0); // needed to avoid SlowCallbackException
-            _hubConnection.Closed += Connection_Closed;
-            _hubConnection.ConnectionSlow += Connection_ConnectionSlow;
-            _hubConnection.Error += Connection_Error;
-            _hubConnection.Received += Connection_Received;
-            _hubConnection.Reconnected += Connection_Reconnected;
-            _hubConnection.Reconnecting += Connection_Reconnecting;
-            _hubConnection.StateChanged += Connection_StateChanged;
+            //UNDONE: set hub event handlers using the new api
+            //_hubConnection = new HubConnection(Configuration.TaskManagementUrl);
+            //_hubConnection.DeadlockErrorTimeout = new TimeSpan(0, 1, 0); // needed to avoid SlowCallbackException
+            //_hubConnection.Closed += Connection_Closed;
+            //_hubConnection.ConnectionSlow += Connection_ConnectionSlow;
+            //_hubConnection.Error += Connection_Error;
+            //_hubConnection.Received += Connection_Received;
+            //_hubConnection.Reconnected += Connection_Reconnected;
+            //_hubConnection.Reconnecting += Connection_Reconnecting;
+            //_hubConnection.StateChanged += Connection_StateChanged;
 
-            // TODO: agent --> taskmanagement authentication
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(Configuration.TaskManagementUrl.TrimEnd('/') + "/" + Hub.Name)
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hubConnection.Closed += async (error) =>
+            {
+                SnLog.WriteWarning($"Agent {AgentName}: connection is closed.", EventId.TaskManagement.Communication);
+
+                await Task.Delay(new Random().Next(0, 5) * 1000);
+                await _hubConnection.StartAsync();
+            };
+
+            //UNDONE: agent --> taskmanagement authentication
 
             // set NTLM credentials (for Windows auth) or Authorization header (for basic auth)
-            if (string.IsNullOrEmpty(Configuration.Username))
-                _hubConnection.Credentials = CredentialCache.DefaultCredentials;
-            else
-                _hubConnection.Headers.Add("Authorization", Configuration.GetBasicAuthHeader(new UserCredentials
-                {
-                    UserName = Configuration.Username,
-                    Password = Configuration.Password
-                }));
+            //if (string.IsNullOrEmpty(Configuration.Username))
+            //    _hubConnection.Credentials = CredentialCache.DefaultCredentials;
+            //else
+            //    _hubConnection.Headers.Add("Authorization", Configuration.GetBasicAuthHeader(new UserCredentials
+            //    {
+            //        UserName = Configuration.Username,
+            //        Password = Configuration.Password
+            //    }));
 
-            _hubProxy = _hubConnection.CreateHubProxy(Hub.Name);
+            //_hubProxy = _hubConnection.CreateHubProxy(Hub.Name);
 
             // register methods for incoming messages
-            _hubProxy.On<SnTask>("newTask", (task) => NewTask(task));
+            _hubConnection.On<SnTask>("newTask", NewTask);
 
             ServicePointManager.DefaultConnectionLimit = 10;
 
-            SnTrace.TaskManagement.Write(string.Format("Agent {0} is CONNECTING to {1}...", AgentName, _hubConnection.Url));
+            SnTrace.TaskManagement.Write(string.Format("Agent {0} is CONNECTING to {1}...", AgentName, Configuration.TaskManagementUrl));
 
             try
             {
-                _hubConnection.Start().Wait();
-                SnLog.WriteInformation(string.Format("Agent {0} is CONNECTED to {1}.", AgentName, _hubConnection.Url), EventId.TaskManagement.Communication);
+                await _hubConnection.StartAsync().ConfigureAwait(false);
+                SnLog.WriteInformation(string.Format("Agent {0} is CONNECTED to {1}.", AgentName, Configuration.TaskManagementUrl), EventId.TaskManagement.Communication);
 
-                var msg = String.Format("Agent {0} works in {1} server context.", AgentName, _serverContext.ServerType.ToString().ToLower());
+                var msg = string.Format("Agent {0} works in {1} server context.", AgentName, _serverContext.ServerType.ToString().ToLower());
                 SnTrace.TaskManagement.Write(msg);
                 Console.WriteLine(msg);
 
@@ -195,7 +220,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             }
             catch (Exception ex)
             {
-                SnLog.WriteException(ex, "SignelR error.", EventId.TaskManagement.Communication);
+                SnLog.WriteException(ex, "SignalR error.", EventId.TaskManagement.Communication);
                 return false;
             }
         }
@@ -208,33 +233,40 @@ namespace SenseNet.TaskManagement.TaskAgent
 
             lock (_reconnectLock)
             {
-                _hubConnection.Dispose();
-                if (!StartSignalR())
-                {
-                    SnTrace.TaskManagement.Write("Agent {0} NOT RECONNECTED", AgentName);
-                    return;
-                }
+                //UNDONE: reconnect
+                SnTrace.TaskManagement.Write("Agent {0} RECONNECT DOES NOT DO ANYTHING", AgentName);
+
+                //_hubConnection.Dispose();
+                //if (!(await StartSignalR()))
+                //{
+                //    SnTrace.TaskManagement.Write("Agent {0} NOT RECONNECTED", AgentName);
+                //    return;
+                //}
             }
 
             SnTrace.TaskManagement.Write("Agent {0} RECONNECTED", AgentName);
             _reconnecting = false;
-            Work();
+            WorkAsync();
         }
 
-        static void Connection_StateChanged(StateChange obj)
-        {
-            SnTrace.TaskManagement.Write("Agent {0} connection state changed: {1} --> {2}", AgentName, obj.OldState, obj.NewState);
-            if (obj.NewState == ConnectionState.Disconnected)
-            {
-                _reconnecting = true;
-                return;
-            }
-            if (obj.NewState == ConnectionState.Connected)
-            {
-                _reconnecting = false;
-                return;
-            }
-        }
+        //UNDONE: use or remove
+        //static void Connection_StateChanged(StateChange obj)
+        //{
+        //    SnTrace.TaskManagement.Write("Agent {0} connection state changed: {1} --> {2}", AgentName, obj.OldState, obj.NewState);
+        //    if (obj.NewState == ConnectionState.Disconnected)
+        //    {
+        //        _reconnecting = true;
+        //        return;
+        //    }
+        //    if (obj.NewState == ConnectionState.Connected)
+        //    {
+        //        _reconnecting = false;
+        //        return;
+        //    }
+        //}
+
+        //UNDONE: replace or remove event handlers
+
         static void Connection_Reconnecting()
         {
             SnTrace.TaskManagement.Write("Agent {0}: connection reconnecing.", AgentName);
@@ -280,17 +312,19 @@ namespace SenseNet.TaskManagement.TaskAgent
             if (t != null && !TaskExecutors.ContainsKey(t.Type))
                 return;
 
-            if (t == null)
-                SnTrace.TaskManagement.Write("Agent {0} handles a 'handle-dead-tasks' message.", AgentName);
-            else
-                SnTrace.TaskManagement.Write("Agent {0} handles a 'new-tasks' message.", AgentName);
+            SnTrace.TaskManagement.Write(
+                t == null
+                    ? "Agent {0} handles a 'handle-dead-tasks' message."
+                    : "Agent {0} handles a 'new-tasks' message.", AgentName);
 
-            Work();
+#pragma warning disable 4014
+            WorkAsync();
+#pragma warning restore 4014
         }
 
         /*------------------------------------------------------------------------- */
 
-        async static void Work()
+        private static async Task WorkAsync()
         {
             lock (_workingsync)
             {
@@ -313,7 +347,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                     _currentTask = null;
                     
                     // this will call the finalizers on the server side and delete the task from the database
-                    SendResultAndDeleteTask(result);
+                    await SendResultAndDeleteTask(result);
 
                     // if an update process started in the meantime, do not get a new task
                     if (_updateStarted)
@@ -377,9 +411,9 @@ namespace SenseNet.TaskManagement.TaskAgent
 
             return result;
         }
-        private static void SendResultAndDeleteTask(SnTaskResult result)
+        private static Task SendResultAndDeleteTask(SnTaskResult result)
         {
-            InvokeProxy(Hub.TaskFinished, result);
+            return InvokeProxyAsync(Hub.TaskFinished, result);
         }
 
         // continuous lock support
@@ -400,8 +434,9 @@ namespace SenseNet.TaskManagement.TaskAgent
                 var taskId = _currentTask == null ? 0 : _currentTask.Id;
                 if (taskId < 1)
                     return;
-                //_hubProxy.Invoke(Hub.RefreshLockMethod, AgentName, taskId);
-                InvokeProxy(Hub.RefreshLockMethod, Environment.MachineName, AgentName, taskId);
+
+                InvokeProxyAsync(Hub.RefreshLockMethod, Environment.MachineName, AgentName, taskId)
+                    .GetAwaiter().GetResult();
                 Console.Write("*");
             }
             catch (Exception ex)
@@ -468,19 +503,22 @@ namespace SenseNet.TaskManagement.TaskAgent
 
                     var progressRecord = GetProgressRecord(e.Data.Substring(9).Trim());
                     if (progressRecord != null)
-                        InvokeProxy(Hub.WriteProgressMethod, Environment.MachineName, AgentName, progressRecord);
+                        InvokeProxyAsync(Hub.WriteProgressMethod, Environment.MachineName, AgentName, 
+                            progressRecord).GetAwaiter().GetResult();
                 }
                 else if (e.Data.StartsWith("StartSubtask:", StringComparison.OrdinalIgnoreCase))
                 {
                     var s = e.Data.Substring(13).Trim();
                     var subtask = JsonConvert.DeserializeObject<SnSubtask>(s);
-                    InvokeProxy(Hub.StartSubtaskMethod, Environment.MachineName, AgentName, subtask, _currentTask);
+                    InvokeProxyAsync(Hub.StartSubtaskMethod, Environment.MachineName, AgentName, 
+                        subtask, _currentTask).GetAwaiter().GetResult();
                 }
                 else if (e.Data.StartsWith("FinishSubtask:", StringComparison.OrdinalIgnoreCase))
                 {
                     var s = e.Data.Substring(14).Trim();
                     var subtask = JsonConvert.DeserializeObject<SnSubtask>(s);
-                    InvokeProxy(Hub.FinishSubtaskMethod, Environment.MachineName, AgentName, subtask, _currentTask);
+                    InvokeProxyAsync(Hub.FinishSubtaskMethod, Environment.MachineName, AgentName, 
+                        subtask, _currentTask).GetAwaiter().GetResult();
                 }
                 else if (e.Data.StartsWith("ResultData:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -514,11 +552,13 @@ namespace SenseNet.TaskManagement.TaskAgent
             {
                 if (_reconnecting)
                 {
-                    Reconnect();
+                    //UNDONE: reconnect
+                    //Reconnect();
                 }
                 else
                 {
-                    InvokeProxy(Hub.HeartbeatMethod, Environment.MachineName, AgentName, GetHealthRecord());
+                    InvokeProxyAsync(Hub.HeartbeatMethod, Environment.MachineName, AgentName, 
+                        GetHealthRecord()).GetAwaiter().GetResult();
                 }
             }
             catch (Exception ex)
@@ -605,7 +645,7 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         private static void StartUpdaterAndExit()
         {
-            // this switch is monitored by the Work method because it 
+            // this switch is monitored by the WorkAsync method because it 
             // must not ask for a new task if an update has started
             _updateStarted = true;
 
@@ -756,15 +796,31 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         private static ulong GetTotalPhysicalMemory()
         {
-            return new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / (1024 * 1024);
+            //UNDONE: get physical memory
+            //return new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / (1024 * 1024);
+            return 0;
         }
 
 
-        internal static void InvokeProxy(string method, params object[] args)
+        internal static async Task InvokeProxyAsync(string method, params object[] args)
         {
             try
             {
-                _hubProxy.Invoke(method, args);
+                switch (args.Length)
+                {
+                    case 0: await _hubConnection.InvokeAsync(method); break;
+                    case 1: await _hubConnection.InvokeAsync(method, args[0]); break;
+                    case 2: await _hubConnection.InvokeAsync(method, args[0], args[1]); break;
+                    case 3: await _hubConnection.InvokeAsync(method, args[0], args[1], args[2]); break;
+                    case 4: await _hubConnection.InvokeAsync(method, args[0], args[1], args[2], 
+                        args[3]); break;
+                    case 5: await _hubConnection.InvokeAsync(method, args[0], args[1], args[2], 
+                        args[3], args[4]); break;
+                    case 6: await _hubConnection.InvokeAsync(method, args[0], args[1], args[2], 
+                        args[3], args[4], args[5]); break;
+                    default:
+                        throw new NotImplementedException("Too many parameters.");
+                }
             }
             catch (Exception e)
             {
@@ -772,19 +828,34 @@ namespace SenseNet.TaskManagement.TaskAgent
                 _reconnecting = true;
             }
         }
-        private static Task<T> InvokeProxy<T>(string method, params object[] args)
+        private static async Task<T> InvokeProxy<T>(string method, params object[] args)
         {
             try
             {
-                return _hubProxy.Invoke<T>(method, args);
+                //return _hubProxy.Invoke<T>(method, args);
+
+                switch (args.Length)
+                {
+                    case 0: return await _hubConnection.InvokeAsync<T>(method);
+                    case 1: return await _hubConnection.InvokeAsync<T>(method, args[0]);
+                    case 2: return await _hubConnection.InvokeAsync<T>(method, args[0], args[1]);
+                    case 3: return await _hubConnection.InvokeAsync<T>(method, args[0], args[1], args[2]);
+                    case 4: return await _hubConnection.InvokeAsync<T>(method, args[0], args[1], args[2],
+                            args[3]);
+                    case 5: return await _hubConnection.InvokeAsync<T>(method, args[0], args[1], args[2],
+                            args[3], args[4]);
+                    case 6: return await _hubConnection.InvokeAsync<T>(method, args[0], args[1], args[2],
+                            args[3], args[4], args[5]);
+                    default:
+                        throw new NotImplementedException("Too many parameters.");
+                }
             }
             catch (Exception e)
             {
                 SnTrace.TaskManagement.Write(e.ToString());
                 _reconnecting = true;
             }
-            return null;
+            return default;
         }
-
     }
 }

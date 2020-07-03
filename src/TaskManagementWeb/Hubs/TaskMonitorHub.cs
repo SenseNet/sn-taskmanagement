@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNet.SignalR;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.AspNetCore.SignalR;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
@@ -49,9 +49,10 @@ namespace SenseNet.TaskManagement.Hubs
         {          
             SnTrace.TaskManagement.Write("TaskMonitorHub Heartbeat. MachineName: {0}, agentName: {1}, healthRecord: {2}", machineName, agentName, healthRecord);
 
+            //UNDONE: use new SignalR API
             // heartbeat is sent to every monitor client
-            var hubContext = GlobalHost.ConnectionManager.GetHubContext<TaskMonitorHub>();
-            hubContext.Clients.All.Heartbeat(agentName, healthRecord);
+            //var hubContext = GlobalHost.ConnectionManager.GetHubContext<TaskMonitorHub>();
+            //hubContext.Clients.All.Heartbeat(agentName, healthRecord);
         }
 
         /// <summary>
@@ -62,11 +63,12 @@ namespace SenseNet.TaskManagement.Hubs
         {
             SnTrace.TaskManagement.Write("TaskMonitorHub OnTaskEvent: {0}, taskId: {1}, agent: {2}", e.EventType, e.TaskId, e.Agent);
 
-            var hubContext = GlobalHost.ConnectionManager.GetHubContext<TaskMonitorHub>();
+            //UNDONE: use new SignalR API
+            //var hubContext = GlobalHost.ConnectionManager.GetHubContext<TaskMonitorHub>();
 
-            // Send events to clients with the same app id only. Monitor clients are 
-            // registered to the appropriate group in the OnConnected event handler.
-            hubContext.Clients.Group(e.AppId).OnTaskEvent(e);
+            //// Send events to clients with the same app id only. Monitor clients are 
+            //// registered to the appropriate group in the OnConnected event handler.
+            //hubContext.Clients.Group(e.AppId).OnTaskEvent(e);
         }
 
         /// <summary>
@@ -76,28 +78,29 @@ namespace SenseNet.TaskManagement.Hubs
         {
             SnTrace.TaskManagement.Write("TaskMonitorHub WriteProgress: {0}, taskId: {1}, agent: {2}", progressRecord.Progress.OverallProgress, progressRecord.TaskId, agentName);
 
-            var hubContext = GlobalHost.ConnectionManager.GetHubContext<TaskMonitorHub>();
+            //UNDONE: use new SignalR API
+            //var hubContext = GlobalHost.ConnectionManager.GetHubContext<TaskMonitorHub>();
 
-            // Send progress to clients with the same app id only. Monitor clients are 
-            // registered to the appropriate group in the OnConnected event handler.
-            hubContext.Clients.Group(progressRecord.AppId).WriteProgress(progressRecord);
+            //// Send progress to clients with the same app id only. Monitor clients are 
+            //// registered to the appropriate group in the OnConnected event handler.
+            //hubContext.Clients.Group(progressRecord.AppId).WriteProgress(progressRecord);
         }
 
         //===================================================================== Overrides
 
-        public override Task OnConnected()
+        public override async Task OnConnectedAsync()
         {
             // Add this client to the appropriate group. Only clients connected 
             // with the same appid will receive messages about a certain task.
-            var appid = Context.QueryString["appid"];
+            var appid = Context.GetHttpContext().Request.Query["appid"].FirstOrDefault();
             if (!string.IsNullOrEmpty(appid))
             {
-                Groups.Add(Context.ConnectionId, appid);                
+                await Groups.AddToGroupAsync(Context.ConnectionId, appid);                
             }
 
             SnTrace.TaskManagement.Write("TaskMonitorHub Client connected. AppId: {0}", appid ?? string.Empty);
 
-            return base.OnConnected();
+            await base.OnConnectedAsync();
         }
     }
 }

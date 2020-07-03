@@ -26,6 +26,7 @@ namespace SenseNet.TaskManagement.TaskAgent
 
     internal class Configuration
     {
+        //UNDONE: modernize configuration
         private const string TASKMANAGEMENTURLKEY = "TaskManagementUrl";
         private const string DEFAULTTASKMANAGEMENTURL = "http://localhost";
         private static string _taskManagementUrl;
@@ -41,6 +42,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                 }
                 return _taskManagementUrl;
             }
+            set => _taskManagementUrl = value;
         }
 
         private const string USERNAMEKEY = "Username";
@@ -167,6 +169,8 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         public static UserCredentials GetUserCredentials(string appId)
         {
+            //UNDONE: get user credentials or secret key using the new config api
+            return null;
             return AppAuthSection.GetUserCredentials(appId);
         }
 

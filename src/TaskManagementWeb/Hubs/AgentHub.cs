@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.AspNet.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
@@ -164,8 +164,9 @@ namespace SenseNet.TaskManagement.Hubs
         {
             try
             {
-                var hubContext = GlobalHost.ConnectionManager.GetHubContext<AgentHub>();
-                hubContext.Clients.All.NewTask(task);
+                //UNDONE: use new SignalR API
+                //var hubContext = GlobalHost.ConnectionManager.GetHubContext<AgentHub>();
+                //hubContext.Clients.All.NewTask(task);
             }
             catch (Exception ex)
             {                
@@ -175,27 +176,27 @@ namespace SenseNet.TaskManagement.Hubs
 
         //===================================================================== Overrides
 
-        public override Task OnConnected()
+        public override Task OnConnectedAsync()
         {
-            //_connections.Add(this.Context.ConnectionId);
             ClientCount++;
             SnTrace.TaskManagement.Write("AgentHub OnConnected. Client count: " + ClientCount);
 
-            return base.OnConnected();
+            return base.OnConnectedAsync();
         }
-        public override Task OnReconnected()
-        {
-            ClientCount++;
-            SnTrace.TaskManagement.Write("AgentHub OnReconnected. Client count: " + ClientCount);
+        //public override Task OnReconnected()
+        //{
+        //    ClientCount++;
+        //    SnTrace.TaskManagement.Write("AgentHub OnReconnected. Client count: " + ClientCount);
             
-            return base.OnReconnected();
-        }
-        public override Task OnDisconnected(bool stopCalled)
+        //    return base.OnReconnected();
+        //}
+        public override Task OnDisconnectedAsync(Exception ex)
         {
             ClientCount--;
-            SnTrace.TaskManagement.Write("AgentHub OnDisconnected(stop called: {0}). Client count: {1}", stopCalled, ClientCount);
+            SnTrace.TaskManagement.Write("AgentHub OnDisconnected(exception: {0}). Client count: {1}", 
+                ex?.Message, ClientCount);
 
-            return base.OnDisconnected(stopCalled);
+            return base.OnDisconnectedAsync(ex);
         }        
     }
 }

@@ -4,17 +4,18 @@ using System.Linq;
 using System.Text;
 using System.Net.Http;
 using System.Web;
-using System.Web.Http;
+//using System.Web.Http;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
 using SenseNet.TaskManagement.Hubs;
 using SenseNet.TaskManagement.Web;
 using System.Net;
+using Microsoft.AspNetCore.Mvc;
 using SenseNet.Diagnostics;
 
 namespace SenseNet.TaskManagement.Controllers
 {
-    public class TaskController : ApiController
+    public class TaskController : Controller
     {
         /// <summary>
         /// Registers a task.
@@ -22,7 +23,7 @@ namespace SenseNet.TaskManagement.Controllers
         /// <param name="taskRequest">Contains the necessary information for registering a task.</param>
         /// <returns>Returns a RegisterTaskResult object containing information about the registered task.</returns>
         [HttpPost]
-        public RegisterTaskResult RegisterTask(RegisterTaskRequest taskRequest)
+        public RegisterTaskResult RegisterTask([FromBody]RegisterTaskRequest taskRequest)
         {
             Application app = null;
 
@@ -41,13 +42,17 @@ namespace SenseNet.TaskManagement.Controllers
             // trying to register the task again (this can happen if the TaskManagement Web
             // was unreachable when the client application tried to register the appid before).
             if (app == null)
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, RegisterTaskRequest.ERROR_UNKNOWN_APPID));
+            {
+                //UNDONE: return null or error result
+                return null;
+                // throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, RegisterTaskRequest.ERROR_UNKNOWN_APPID));
+            }
 
             RegisterTaskResult result = null;
 
             try
             {
-                // calculate hash with the default algrithm if not given
+                // calculate hash with the default algorithm if not given
                 var hash = taskRequest.Hash == 0
                     ? ComputeTaskHash(taskRequest.Type + taskRequest.AppId + taskRequest.Tag + taskRequest.TaskData)
                     : taskRequest.Hash;
@@ -65,8 +70,11 @@ namespace SenseNet.TaskManagement.Controllers
             }
             catch (Exception ex)
             {
-                // the client app needs to be notified
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
+                //UNDONE: the client app needs to be notified
+                // Consider returning a result object with an error message, or IActionResult
+                return null;
+
+                //throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
             }
 
             try
@@ -95,7 +103,7 @@ namespace SenseNet.TaskManagement.Controllers
         /// </summary>
         /// <param name="appRequest">Contains the necessary information for registering an application.</param>
         [HttpPost]        
-        public void RegisterApplication(RegisterApplicationRequest appRequest)
+        public void RegisterApplication([FromBody]RegisterApplicationRequest appRequest)
         {
             try
             {
@@ -103,8 +111,9 @@ namespace SenseNet.TaskManagement.Controllers
             }
             catch (Exception ex)
             {
-                // the client app needs to be notified
-                throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
+                //UNDONE: the client app needs to be notified
+                return;
+                //throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
             }
 
             // invalidate app cache

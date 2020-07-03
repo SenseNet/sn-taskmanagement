@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNet.SignalR;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Security.Principal;
-using System.Web;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SenseNet.TaskManagement.Hubs
 {
@@ -13,18 +10,20 @@ namespace SenseNet.TaskManagement.Hubs
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
     internal class SenseNetAuthorizeHubAttribute : AuthorizeAttribute
     {
-        protected override bool UserAuthorized(System.Security.Principal.IPrincipal user)
-        {
-            // TODO: authentication/authorization
+        //UNDONE: authentication/authorization
 
-            var princ = user as WindowsPrincipal;
-            if (princ == null || princ.Identity == null)
-                throw new ArgumentNullException("user");
+        //protected override bool UserAuthorized(System.Security.Principal.IPrincipal user)
+        //{
+        //    // TODO: authentication/authorization
 
-            if (!princ.Identity.IsAuthenticated)
-                return false;
+        //    var princ = user as WindowsPrincipal;
+        //    if (princ == null || princ.Identity == null)
+        //        throw new ArgumentNullException("user");
 
-            return false;
-        }
+        //    if (!princ.Identity.IsAuthenticated)
+        //        return false;
+
+        //    return false;
+        //}
     }
 }
