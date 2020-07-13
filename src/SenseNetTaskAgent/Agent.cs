@@ -14,13 +14,13 @@ using Newtonsoft.Json;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Core.Configuration;
+using SenseNetTaskAgent;
 
 namespace SenseNet.TaskManagement.TaskAgent
 {
     internal class Agent
     {
-        private static string _agentName = Guid.NewGuid().ToString();
-        internal static string AgentName { get { return _agentName; } }
+        internal static string AgentName { get; private set; } = Guid.NewGuid().ToString();
         private static object _workingsync = new object();
         private static bool _working;
         private static bool _updateStarted;
@@ -32,7 +32,6 @@ namespace SenseNet.TaskManagement.TaskAgent
         private static ServerContext _serverContext = new ServerContext { ServerType = ServerType.Distributed };
 
         private static HubConnection _hubConnection;
-        //private static IHubProxy _hubProxy;
 
         private static Dictionary<string, string> _executorVersions;
         private static Dictionary<string, string> TaskExecutorVersions
@@ -75,11 +74,11 @@ namespace SenseNet.TaskManagement.TaskAgent
 
             Configuration.TaskManagementUrl = config["sensenet:TaskManagementUrl"];
 
-            //SnLog.Instance = new SnEventLogger(Configuration.LogName, Configuration.LogSourceName);
             SnLog.Instance = new SnFileSystemEventLogger();
             SnTrace.SnTracers.Add(new SnFileSystemTracer());
+            SnTrace.EnableAll();
 
-            _agentName = AgentManager.GetAgentName();
+            AgentName = AgentManager.GetAgentName();
 
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 
@@ -107,21 +106,21 @@ namespace SenseNet.TaskManagement.TaskAgent
                 }
 
                 _heartBeatTimerPeriodInMilliseconds = Configuration.HeartbeatPeriodInSeconds * 1000;
-                _heartbeatTimer = new Timer(new TimerCallback(HeartBeatTimerElapsed), null, _heartBeatTimerPeriodInMilliseconds, _heartBeatTimerPeriodInMilliseconds);
+                _heartbeatTimer = new Timer(HeartBeatTimerElapsed, null, _heartBeatTimerPeriodInMilliseconds, _heartBeatTimerPeriodInMilliseconds);
 
                 // TODO: update mechanism
                 //_updateTimer = new Timer(UpdateTimerElapsed, null, 500, 30000);
 
+#pragma warning disable 4014
+                // start processing on a background thread
                 if (started)
                     WorkAsync();
-                else
-                    _reconnecting = true;
-
-                Console.WriteLine("Press <enter> to exit...");
+#pragma warning restore 4014
+                
                 Console.ReadLine();
 
-                //UNDONE: connection dispose
-                //_hubConnection.Dispose();
+                if (_hubConnection != null)
+                    await _hubConnection.DisposeAsync();
             }
             catch (Exception ex)
             {
@@ -162,28 +161,41 @@ namespace SenseNet.TaskManagement.TaskAgent
                 
         private static async Task<bool> StartSignalR()
         {
-            //UNDONE: set hub event handlers using the new api
-            //_hubConnection = new HubConnection(Configuration.TaskManagementUrl);
-            //_hubConnection.DeadlockErrorTimeout = new TimeSpan(0, 1, 0); // needed to avoid SlowCallbackException
-            //_hubConnection.Closed += Connection_Closed;
-            //_hubConnection.ConnectionSlow += Connection_ConnectionSlow;
-            //_hubConnection.Error += Connection_Error;
-            //_hubConnection.Received += Connection_Received;
-            //_hubConnection.Reconnected += Connection_Reconnected;
-            //_hubConnection.Reconnecting += Connection_Reconnecting;
-            //_hubConnection.StateChanged += Connection_StateChanged;
+            if (_hubConnection != null)
+                await _hubConnection.DisposeAsync();
 
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl(Configuration.TaskManagementUrl.TrimEnd('/') + "/" + Hub.Name)
-                .WithAutomaticReconnect()
+                .WithAutomaticReconnect(new InfiniteRetryPolicy())
                 .Build();
 
-            _hubConnection.Closed += async (error) =>
+            _hubConnection.Closed += async error =>
             {
-                SnLog.WriteWarning($"Agent {AgentName}: connection is closed.", EventId.TaskManagement.Communication);
+                SnLog.WriteWarning($"Agent {AgentName}: connection is CLOSED. Restarting...", 
+                    EventId.TaskManagement.Communication);
 
                 await Task.Delay(new Random().Next(0, 5) * 1000);
                 await _hubConnection.StartAsync();
+
+                SnLog.WriteInformation($"Agent {AgentName}: connection RESTARTED.");
+            };
+            _hubConnection.Reconnecting += exception =>
+            {
+                SnTrace.TaskManagement.Write("Agent {0}: connection RECONNECTING. Error: {1}", 
+                    AgentName, exception?.Message);
+                return Task.CompletedTask;
+            };
+            _hubConnection.Reconnected += connectionId =>
+            {
+                SnLog.WriteInformation($"Agent {AgentName}: connection RECONNECTED.", 
+                    EventId.TaskManagement.Communication);
+
+#pragma warning disable 4014
+                // restart worker thread
+                WorkAsync();
+#pragma warning restore 4014
+
+                return Task.CompletedTask;
             };
 
             //UNDONE: agent --> taskmanagement authentication
@@ -198,21 +210,24 @@ namespace SenseNet.TaskManagement.TaskAgent
             //        Password = Configuration.Password
             //    }));
 
-            //_hubProxy = _hubConnection.CreateHubProxy(Hub.Name);
-
             // register methods for incoming messages
             _hubConnection.On<SnTask>("newTask", NewTask);
 
             ServicePointManager.DefaultConnectionLimit = 10;
 
-            SnTrace.TaskManagement.Write(string.Format("Agent {0} is CONNECTING to {1}...", AgentName, Configuration.TaskManagementUrl));
+            SnTrace.TaskManagement.Write($"Agent {AgentName} is CONNECTING to " +
+                                         $"{Configuration.TaskManagementUrl}...");
 
             try
             {
                 await _hubConnection.StartAsync().ConfigureAwait(false);
-                SnLog.WriteInformation(string.Format("Agent {0} is CONNECTED to {1}.", AgentName, Configuration.TaskManagementUrl), EventId.TaskManagement.Communication);
 
-                var msg = string.Format("Agent {0} works in {1} server context.", AgentName, _serverContext.ServerType.ToString().ToLower());
+                SnLog.WriteInformation($"Agent {AgentName} is CONNECTED to {Configuration.TaskManagementUrl}.", 
+                    EventId.TaskManagement.Communication);
+
+                var msg = $"Agent {AgentName} works in {_serverContext.ServerType.ToString().ToLower()} " +
+                          "server context.";
+
                 SnTrace.TaskManagement.Write(msg);
                 Console.WriteLine(msg);
 
@@ -221,86 +236,29 @@ namespace SenseNet.TaskManagement.TaskAgent
             catch (Exception ex)
             {
                 SnLog.WriteException(ex, "SignalR error.", EventId.TaskManagement.Communication);
+                Console.WriteLine($"[{DateTime.UtcNow}] Connection could not be opened, waiting for heartbeat to retry the operation...");
                 return false;
             }
         }
 
-        private static object _reconnectLock = new object();
+        private static readonly object ReconnectLock = new object();
         private static void Reconnect()
         {
             SnTrace.TaskManagement.Write("Agent {0} RECONNECTING...", AgentName);
-            _reconnecting = true;
 
-            lock (_reconnectLock)
+            lock (ReconnectLock)
             {
-                //UNDONE: reconnect
-                SnTrace.TaskManagement.Write("Agent {0} RECONNECT DOES NOT DO ANYTHING", AgentName);
-
-                //_hubConnection.Dispose();
-                //if (!(await StartSignalR()))
-                //{
-                //    SnTrace.TaskManagement.Write("Agent {0} NOT RECONNECTED", AgentName);
-                //    return;
-                //}
+                if (!StartSignalR().GetAwaiter().GetResult())
+                {
+                    SnTrace.TaskManagement.Write("Agent {0} NOT RECONNECTED", AgentName);
+                    return;
+                }
             }
 
-            SnTrace.TaskManagement.Write("Agent {0} RECONNECTED", AgentName);
-            _reconnecting = false;
+#pragma warning disable 4014
+            // start worker background thread
             WorkAsync();
-        }
-
-        //UNDONE: use or remove
-        //static void Connection_StateChanged(StateChange obj)
-        //{
-        //    SnTrace.TaskManagement.Write("Agent {0} connection state changed: {1} --> {2}", AgentName, obj.OldState, obj.NewState);
-        //    if (obj.NewState == ConnectionState.Disconnected)
-        //    {
-        //        _reconnecting = true;
-        //        return;
-        //    }
-        //    if (obj.NewState == ConnectionState.Connected)
-        //    {
-        //        _reconnecting = false;
-        //        return;
-        //    }
-        //}
-
-        //UNDONE: replace or remove event handlers
-
-        static void Connection_Reconnecting()
-        {
-            SnTrace.TaskManagement.Write("Agent {0}: connection reconnecing.", AgentName);
-        }
-        static void Connection_Reconnected()
-        {
-            SnLog.WriteInformation($"Agent {AgentName}: connection reconnected.", EventId.TaskManagement.Communication);
-        }
-        static void Connection_Received(string obj)
-        {
-            SnTrace.TaskManagement.Write("Agent {0}: received: {1}", AgentName, obj.Replace('\r', ' ').Replace('\n', ' '));
-        }
-        static void Connection_Error(Exception obj)
-        {
-            SnLog.WriteException(obj, "Connection error", EventId.TaskManagement.Communication);
-            if (_serverContext.ServerType == ServerType.Distributed)
-            {
-                _reconnecting = true;
-            }
-            else
-            {
-                SnTrace.TaskManagement.Write("@@@@@@@@@@@@@@@@@@@@@@ Agent {0} now commits suicide.", AgentName);
-                Thread.Sleep(1000);
-                Process.GetCurrentProcess().Kill();
-            }
-        }
-        static void Connection_ConnectionSlow()
-        {
-            SnLog.WriteWarning($"Agent {AgentName}: connection is slow.",
-                EventId.TaskManagement.Communication);
-        }
-        static void Connection_Closed()
-        {
-            SnLog.WriteWarning($"Agent {AgentName}: connection is closed.", EventId.TaskManagement.Communication);
+#pragma warning restore 4014
         }
 
         /*----------------------------------------------------- called by hub proxy */
@@ -360,7 +318,6 @@ namespace SenseNet.TaskManagement.TaskAgent
             catch (Exception e)
             {
                 SnLog.WriteException(e, "Agent error.", EventId.TaskManagement.General);
-                _reconnecting = true;
             }
             finally
             {
@@ -372,7 +329,7 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         private static Task<SnTask> GetTask()
         {
-            return InvokeProxy<SnTask>(Hub.GetTaskMethod, Environment.MachineName, AgentName, _capabilities);
+            return InvokeProxyAsync<SnTask>(Hub.GetTaskMethod, Environment.MachineName, AgentName, _capabilities);
         }
 
         private static SnTaskResult ExecuteTask(SnTask t)
@@ -543,21 +500,19 @@ namespace SenseNet.TaskManagement.TaskAgent
         // heartbeat support
         static PerformanceCounter cpuCounter = new PerformanceCounter() { CategoryName = "Processor", CounterName = "% Processor Time", InstanceName = "_Total" };
         static PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available MBytes");
-        private static bool _reconnecting;
         private static Timer _heartbeatTimer;
         private static int _heartBeatTimerPeriodInMilliseconds;
         private static void HeartBeatTimerElapsed(object o)
         {
             try
             {
-                if (_reconnecting)
+                if (_hubConnection == null || _hubConnection.State == HubConnectionState.Disconnected)
                 {
-                    //UNDONE: reconnect
-                    //Reconnect();
+                    Reconnect();
                 }
                 else
                 {
-                    InvokeProxyAsync(Hub.HeartbeatMethod, Environment.MachineName, AgentName, 
+                    InvokeProxyAsync(Hub.HeartbeatMethod, Environment.MachineName, AgentName,
                         GetHealthRecord()).GetAwaiter().GetResult();
                 }
             }
@@ -806,6 +761,13 @@ namespace SenseNet.TaskManagement.TaskAgent
         {
             try
             {
+                if (_hubConnection.State != HubConnectionState.Connected)
+                {
+                    SnTrace.TaskManagement.Write("Cannot invoke hub methods when " +
+                                                 $"the connection state is {_hubConnection.State}");
+                    return;
+                }
+
                 switch (args.Length)
                 {
                     case 0: await _hubConnection.InvokeAsync(method); break;
@@ -825,14 +787,18 @@ namespace SenseNet.TaskManagement.TaskAgent
             catch (Exception e)
             {
                 SnTrace.TaskManagement.Write(e.ToString());
-                _reconnecting = true;
             }
         }
-        private static async Task<T> InvokeProxy<T>(string method, params object[] args)
+        private static async Task<T> InvokeProxyAsync<T>(string method, params object[] args)
         {
             try
             {
-                //return _hubProxy.Invoke<T>(method, args);
+                if (_hubConnection.State != HubConnectionState.Connected)
+                {
+                    SnTrace.TaskManagement.Write("Cannot invoke hub methods when " +
+                                                 $"the connection state is {_hubConnection.State}");
+                    return default;
+                }
 
                 switch (args.Length)
                 {
@@ -853,7 +819,6 @@ namespace SenseNet.TaskManagement.TaskAgent
             catch (Exception e)
             {
                 SnTrace.TaskManagement.Write(e.ToString());
-                _reconnecting = true;
             }
             return default;
         }
