@@ -156,7 +156,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         }
         private static string GetExecutorExeName(string name)
         {
-            return TaskManagement.TaskAgent.Tools.GetExecutorExeName(name);
+            return Core.Tools.GetExecutorExeName(name);
         }
                 
         private static async Task<bool> StartSignalR()

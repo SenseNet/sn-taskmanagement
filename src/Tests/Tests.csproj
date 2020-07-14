@@ -65,6 +65,12 @@
   <ItemGroup>
     <None Include="app.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\TaskManagement.Core\SenseNet.TaskManagement.Core.csproj">
+      <Project>{E8335731-1E4F-4DAC-99ED-CD9BCCF686CB}</Project>
+      <Name>SenseNet.TaskManagement.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>
