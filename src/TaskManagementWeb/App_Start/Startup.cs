@@ -84,6 +84,7 @@ namespace SenseNet.TaskManagement.Web
                     pattern: "{controller=Home}/{action=Index}/{id?}");
 
                 endpoints.MapHub<AgentHub>("/agenthub");
+                endpoints.MapHub<TaskMonitorHub>("/monitorhub");
             });
 
             //UNDONE: add SQL server backend if SignalR SQL is enabled

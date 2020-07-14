@@ -91,13 +91,13 @@ namespace SenseNet.TaskManagement.Controllers
             try
             {
                 // notify agents
-                _agentHub.BroadcastNewTask(result.Task);
+                await _agentHub.BroadcastNewTask(result.Task).ConfigureAwait(false);
 
                 // notify monitor clients
                 await _monitorHub.OnTaskEvent(SnTaskEvent.CreateRegisteredEvent(
                     result.Task.Id, result.Task.Title, string.Empty, result.Task.AppId,
                     result.Task.Tag, null, result.Task.Type, result.Task.Order,
-                    result.Task.Hash, result.Task.TaskData));
+                    result.Task.Hash, result.Task.TaskData)).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
