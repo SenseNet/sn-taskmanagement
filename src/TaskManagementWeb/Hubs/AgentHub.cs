@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using SenseNet.Diagnostics;
@@ -8,10 +9,32 @@ using SenseNet.TaskManagement.Web;
 
 namespace SenseNet.TaskManagement.Hubs
 {
+    public static class AgentHubExtensions
+    {
+        public static async Task BroadcastNewTask(this IHubContext<AgentHub> hubContext, SnTask task)
+        {
+            try
+            {
+                await hubContext.Clients.All.SendAsync("newTask", task).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                SnLog.WriteException(ex, "AgentHub BroadcastNewTask failed.", EventId.TaskManagement.General);
+            }
+        }
+    }
+
     //TODO: authentication/authorization
     //[SenseNetAuthorizeAttribute]
     public class AgentHub : Hub
     {
+        private readonly IHubContext<TaskMonitorHub> _monitorHub;
+
+        public AgentHub(IHubContext<TaskMonitorHub> monitorHub)
+        {
+            _monitorHub = monitorHub;
+        }
+
         //===================================================================== Properties
 
         /// <summary>
@@ -28,11 +51,12 @@ namespace SenseNet.TaskManagement.Hubs
             try
             {
                 var task = TaskDataHandler.GetNextAndLock(machineName, agentName, capabilities);
-                SnTrace.TaskManagement.Write("AgentHub TaskDataHandler.GetNextAndLock returned with: " + (task == null ? "null" : "task " + task.Id.ToString()));
+                SnTrace.TaskManagement.Write("AgentHub TaskDataHandler.GetNextAndLock returned: " + (task == null ? "null" : "task " + task.Id));
 
                 // task details are not passed to the monitor yet
                 if (task != null)
-                    TaskMonitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null, task.AppId, task.Tag, machineName, agentName)); 
+                    _monitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null, 
+                        task.AppId, task.Tag, machineName, agentName)).GetAwaiter().GetResult(); 
 
                 return task;
             }
@@ -52,14 +76,16 @@ namespace SenseNet.TaskManagement.Hubs
 
         public void Heartbeat(string machineName, string agentName, SnHealthRecord healthRecord)
         {
-            SnTrace.TaskManagement.Write("AgentHub Heartbeat. Agent: {0}, data: {1}.", agentName, healthRecord);
+            SnTrace.TaskManagement.Write($"AgentHub Heartbeat. Machine: {machineName}, Agent: " +
+                                         $"{agentName}, Process id: {healthRecord.ProcessId}, " +
+                                         $"RAM: {healthRecord.RAM}, CPU: {healthRecord.CPU}.");
             try
             {
-                TaskMonitorHub.Heartbeat(machineName, agentName, healthRecord);
+                _monitorHub.Heartbeat(machineName, agentName, healthRecord).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {                
-                SnLog.WriteException(ex, "AgentHub RefreshLock failed.", EventId.TaskManagement.General);
+                SnLog.WriteException(ex, "AgentHub Heartbeat failed.", EventId.TaskManagement.General);
             }
         }
 
@@ -103,13 +129,21 @@ namespace SenseNet.TaskManagement.Hubs
                 {
                     // This method does not need to be awaited, because we do not want to do anything 
                     // with the result, only notify the app that the task has been finished.
+#pragma warning disable 4014
                     ApplicationHandler.SendFinalizeNotificationAsync(taskResult);
+#pragma warning restore 4014
                 }
 
                 // notify monitors
-                TaskMonitorHub.OnTaskEvent(taskResult.Successful
-                    ? SnTaskEvent.CreateDoneEvent(taskResult.Task.Id, taskResult.Task.Title, taskResult.ResultData, taskResult.Task.AppId, taskResult.Task.Tag, taskResult.MachineName, taskResult.AgentName)
-                    : SnTaskEvent.CreateFailedEvent(taskResult.Task.Id, taskResult.Task.Title, taskResult.ResultData, taskResult.Task.AppId, taskResult.Task.Tag, taskResult.MachineName, taskResult.AgentName));
+                var te = taskResult.Successful
+                    ? SnTaskEvent.CreateDoneEvent(taskResult.Task.Id, taskResult.Task.Title,
+                        taskResult.ResultData, taskResult.Task.AppId, taskResult.Task.Tag,
+                        taskResult.MachineName, taskResult.AgentName)
+                    : SnTaskEvent.CreateFailedEvent(taskResult.Task.Id, taskResult.Task.Title,
+                        taskResult.ResultData, taskResult.Task.AppId, taskResult.Task.Tag,
+                        taskResult.MachineName, taskResult.AgentName);
+
+                _monitorHub.OnTaskEvent(te).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {                
@@ -119,11 +153,14 @@ namespace SenseNet.TaskManagement.Hubs
 
         public void StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
         {
-            SnTrace.TaskManagement.Write("AgentHub StartSubtask. Task id:{0}, agent:{1}, title:{2}", task.Id, agentName, subtask.Title);
+            SnTrace.TaskManagement.Write("AgentHub StartSubtask. Task id:{0}, agent:{1}, title:{2}", 
+                task.Id, agentName, subtask.Title);
             try
             { 
                 TaskDataHandler.StartSubtask(machineName, agentName, subtask, task);
-                TaskMonitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskStartedEvent(task.Id, subtask.Title, subtask.Details, task.AppId, task.Tag, machineName, agentName, subtask.Id));
+
+                _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskStartedEvent(task.Id, subtask.Title, subtask.Details, 
+                    task.AppId, task.Tag, machineName, agentName, subtask.Id)).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {                
@@ -137,7 +174,9 @@ namespace SenseNet.TaskManagement.Hubs
             try
             {                
                 TaskDataHandler.FinishSubtask(machineName, agentName, subtask, task);
-                TaskMonitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskFinishedEvent(task.Id, subtask.Title, subtask.Details, task.AppId, task.Tag, machineName, agentName, subtask.Id));
+                
+                _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskFinishedEvent(task.Id, subtask.Title, subtask.Details, 
+                    task.AppId, task.Tag, machineName, agentName, subtask.Id)).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {                
@@ -147,33 +186,18 @@ namespace SenseNet.TaskManagement.Hubs
 
         public void WriteProgress(string machineName, string agentName, SnProgressRecord progressRecord)
         {
-            SnTrace.TaskManagement.Write("AgentHub WriteProgress. agent:{0}, progress:{1}", agentName, progressRecord);               
+            SnTrace.TaskManagement.Write("AgentHub WriteProgress. agent:{0}, progress:{1}", 
+                agentName, progressRecord);               
             try
             {
-                TaskMonitorHub.WriteProgress(machineName, agentName, progressRecord);
+                _monitorHub.WriteProgress(machineName, agentName, progressRecord).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {                
                 SnLog.WriteException(ex, "AgentHub WriteProgress failed.", EventId.TaskManagement.General);
             }
         }
-
-        //===================================================================== Static API
-
-        public static void BroadcastMessage(SnTask task)
-        {
-            try
-            {
-                //UNDONE: use new SignalR API
-                //var hubContext = GlobalHost.ConnectionManager.GetHubContext<AgentHub>();
-                //hubContext.Clients.All.NewTask(task);
-            }
-            catch (Exception ex)
-            {                
-                SnLog.WriteException(ex, "AgentHub BroadcastMessage failed.", EventId.TaskManagement.General);
-            }
-        }
-
+        
         //===================================================================== Overrides
 
         public override Task OnConnectedAsync()
@@ -181,15 +205,15 @@ namespace SenseNet.TaskManagement.Hubs
             ClientCount++;
             SnTrace.TaskManagement.Write("AgentHub OnConnected. Client count: " + ClientCount);
 
+            var agentHub = Context.GetHttpContext()?.RequestServices.GetService(typeof(IHubContext<AgentHub>)) as
+                IHubContext<AgentHub>;
+
+            // This is here to have access to the agent hub service. Timer initialization
+            // should happen only once.
+            InitializeDeadTaskTimer(agentHub);
+
             return base.OnConnectedAsync();
         }
-        //public override Task OnReconnected()
-        //{
-        //    ClientCount++;
-        //    SnTrace.TaskManagement.Write("AgentHub OnReconnected. Client count: " + ClientCount);
-            
-        //    return base.OnReconnected();
-        //}
         public override Task OnDisconnectedAsync(Exception ex)
         {
             ClientCount--;
@@ -197,6 +221,34 @@ namespace SenseNet.TaskManagement.Hubs
                 ex?.Message, ClientCount);
 
             return base.OnDisconnectedAsync(ex);
-        }        
+        }
+
+        private static readonly int HandleDeadTaskPeriodInMilliseconds = 60 * 1000;
+        private static Timer _deadTaskTimer;
+
+        private static void InitializeDeadTaskTimer(IHubContext<AgentHub> agentHub)
+        {
+            if (agentHub == null)
+                return;
+
+            // initialize the timer only once
+            if (_deadTaskTimer != null)
+                return;
+
+            SnTrace.TaskManagement.Write("Initializing dead task timer.");
+
+            _deadTaskTimer = new Timer(state =>
+                {
+                    var ah = (IHubContext<AgentHub>)state;
+                    var dtc = TaskDataHandler.GetDeadTaskCount();
+                    
+                    // if there is a dead task in the db, notify agents
+                    if (dtc > 0)
+                        ah.BroadcastNewTask(null).GetAwaiter().GetResult();
+                }, 
+                agentHub,
+                HandleDeadTaskPeriodInMilliseconds,
+                HandleDeadTaskPeriodInMilliseconds);
+        }
     }
 }

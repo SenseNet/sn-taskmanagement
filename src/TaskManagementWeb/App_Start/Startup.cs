@@ -115,13 +115,7 @@ namespace SenseNet.TaskManagement.Web
 
             //UNDONE: configure global error logging
             //httpConfiguration.Services.Add(typeof(IExceptionLogger), new WebExceptionLogger());
-
-            //UNDONE: web api registration?
-            //appBuilder.UseWebApi(httpConfiguration);
-
-            // initialize dead task timer
-            InitializeDeadTaskTimer();
-
+            
             SnLog.WriteInformation("SenseNet TaskManagement app started.", EventId.TaskManagement.Lifecycle);
 
             // load apps
@@ -129,22 +123,7 @@ namespace SenseNet.TaskManagement.Web
         }
 
         //===================================================================== Application initialization
-
-        private static int _handleDeadTaskPeriodInMilliseconds = 60 * 1000;
-        private static Timer _deadTaskTimer;
-
-        private static void InitializeDeadTaskTimer()
-        {
-            _deadTaskTimer = new Timer(new TimerCallback(DeadTaskTimerElapsed), null, 
-                _handleDeadTaskPeriodInMilliseconds, 
-                _handleDeadTaskPeriodInMilliseconds);
-        }
-        private static void DeadTaskTimerElapsed(object o)
-        {
-            if (TaskDataHandler.GetDeadTaskCount() > 0)
-                AgentHub.BroadcastMessage(null);
-        }
-
+        
         //UNDONE: set up error handling
 
         //private static void ConfigureErrorHandling()

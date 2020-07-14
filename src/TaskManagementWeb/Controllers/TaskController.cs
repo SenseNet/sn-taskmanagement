@@ -10,20 +10,31 @@ using SenseNet.TaskManagement.Data;
 using SenseNet.TaskManagement.Hubs;
 using SenseNet.TaskManagement.Web;
 using System.Net;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using SenseNet.Diagnostics;
 
 namespace SenseNet.TaskManagement.Controllers
 {
     public class TaskController : Controller
     {
+        private readonly IHubContext<AgentHub> _agentHub;
+        private readonly IHubContext<TaskMonitorHub> _monitorHub;
+
+        public TaskController(IHubContext<AgentHub> agentHub, IHubContext<TaskMonitorHub> monitorHub)
+        {
+            _agentHub = agentHub;
+            _monitorHub = monitorHub;
+        }
+
         /// <summary>
         /// Registers a task.
         /// </summary>
         /// <param name="taskRequest">Contains the necessary information for registering a task.</param>
         /// <returns>Returns a RegisterTaskResult object containing information about the registered task.</returns>
         [HttpPost]
-        public RegisterTaskResult RegisterTask([FromBody]RegisterTaskRequest taskRequest)
+        public async Task<RegisterTaskResult> RegisterTask([FromBody]RegisterTaskRequest taskRequest)
         {
             Application app = null;
 
@@ -80,10 +91,10 @@ namespace SenseNet.TaskManagement.Controllers
             try
             {
                 // notify agents
-                AgentHub.BroadcastMessage(result.Task);
+                _agentHub.BroadcastNewTask(result.Task);
 
                 // notify monitor clients
-                TaskMonitorHub.OnTaskEvent(SnTaskEvent.CreateRegisteredEvent(
+                await _monitorHub.OnTaskEvent(SnTaskEvent.CreateRegisteredEvent(
                     result.Task.Id, result.Task.Title, string.Empty, result.Task.AppId,
                     result.Task.Tag, null, result.Task.Type, result.Task.Order,
                     result.Task.Hash, result.Task.TaskData));

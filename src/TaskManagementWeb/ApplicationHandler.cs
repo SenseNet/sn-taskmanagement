@@ -91,6 +91,11 @@ namespace SenseNet.TaskManagement.Web
             if (string.IsNullOrEmpty(finalizeUrl))
                 return;
 
+            SnTrace.TaskManagement.Write($"Sending finalize notification. AppId: {result.Task.AppId}." +
+                                         $"Agent: {result.AgentName}, " +
+                                         $"Task: {result.Task.Id}, Type: {result.Task.Type}, " +
+                                         $"task success: {result.Successful}");
+
             using (var client = GetHttpClient(result.Task.AppId))
             {
                 // create post data

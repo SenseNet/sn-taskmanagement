@@ -295,9 +295,9 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                     cm1.Parameters.Add("@Type", SqlDbType.NVarChar).Value = type;
                     cm1.Parameters.Add("@Title", SqlDbType.NVarChar).Value = title;
                     cm1.Parameters.Add("@Order", SqlDbType.Float).Value = order;
-                    cm1.Parameters.Add("@Tag", SqlDbType.NVarChar).Value = tag;
+                    cm1.Parameters.Add("@Tag", SqlDbType.NVarChar).Value = (object)tag ?? DBNull.Value;
                     cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = (object)appId ?? DBNull.Value;
-                    cm1.Parameters.Add("@FinalizeUrl", SqlDbType.NVarChar).Value = finalizeUrl;
+                    cm1.Parameters.Add("@FinalizeUrl", SqlDbType.NVarChar).Value = (object)finalizeUrl ?? DBNull.Value;
                     cm1.Parameters.Add("@Hash", SqlDbType.BigInt).Value = hash;
                     cm1.Parameters.Add("@TaskData", SqlDbType.NVarChar).Value = taskDataSerialized;
 
