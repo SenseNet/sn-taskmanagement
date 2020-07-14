@@ -604,9 +604,9 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 cm.CommandText = @"INSERT INTO TaskEvents ( EventType,  EventTime,  SubtaskId,  Title,  Details,  AppId,  Machine,  Agent,  Tag,  TaskId,  TaskType,  TaskOrder,   TaskHash,  TaskData ) VALUES
                                                           (@EventType, GETUTCDATE(), @SubtaskId, @Title, @Details, @AppId, @Machine, @Agent, @Tag, @TaskId, @TaskType, @TaskOrder,  @TaskHash, @TaskData )";
 
-                cm.Parameters.Add("@EventType", SqlDbType.NVarChar).Value = eventType.ToString();
+                cm.Parameters.Add("@EventType", SqlDbType.NVarChar).Value = eventType;
                 cm.Parameters.Add("@SubTaskId", SqlDbType.UniqueIdentifier).Value = subtaskId.HasValue ? (object)subtaskId.Value : DBNull.Value;
-                cm.Parameters.Add("@Title", SqlDbType.NVarChar).Value = title;
+                cm.Parameters.Add("@Title", SqlDbType.NVarChar).Value = (object)title ?? DBNull.Value;
                 cm.Parameters.Add("@Details", SqlDbType.NVarChar).Value = (object)details ?? DBNull.Value;
                 cm.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = (object)appId ?? DBNull.Value;
                 cm.Parameters.Add("@Machine", SqlDbType.NVarChar).Value = (object)machine ?? DBNull.Value;
