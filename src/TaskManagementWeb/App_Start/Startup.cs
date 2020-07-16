@@ -43,7 +43,9 @@ namespace SenseNet.TaskManagement.Web
             SnTrace.SnTracers.Add(new SnFileSystemTracer());
             SnTrace.EnableAll();
 
-            //UNDONE: use config binding
+            services.Configure<TaskManagementConfiguration>(Configuration.GetSection("TaskManagement"));
+
+            //TODO: inject connection string to a TaskDataHandler instance
             Web.Configuration.ConnectionString = Configuration.GetConnectionString("TaskDatabase");
 
             //TODO: inject allowed origins dynamically (do not allow everything)
@@ -99,24 +101,13 @@ namespace SenseNet.TaskManagement.Web
                 endpoints.MapHub<TaskMonitorHub>("/monitorhub");
             });
 
-            //UNDONE: add SQL server backend if SignalR SQL is enabled
+            //UNDONE: add Redis backend if SignalR scale out is enabled
             //if (SenseNet.TaskManagement.Web.Configuration.SignalRSqlEnabled)
             //    GlobalHost.DependencyResolver.UseSqlServer(SenseNet.TaskManagement.Web.Configuration.SignalRDatabaseConnectionString);
 
             SnLog.WriteInformation(
-                $"SignalR SQL backplane is{(Web.Configuration.SignalRSqlEnabled ? string.Empty : " NOT")} enabled.",
+                $"SignalR backplane is{(Web.Configuration.SignalRSqlEnabled ? string.Empty : " NOT")} enabled.",
                 EventId.TaskManagement.Lifecycle);
-
-            //var httpConfiguration = new HttpConfiguration();
-
-            //httpConfiguration.Formatters.Clear();
-            //httpConfiguration.Formatters.Add(new JsonMediaTypeFormatter());
-
-            //httpConfiguration.Formatters.JsonFormatter.SerializerSettings =
-            //    new JsonSerializerSettings
-            //    {
-            //        ContractResolver = new CamelCasePropertyNamesContractResolver()
-            //    };
             
             //TODO: configure global error logging
             //httpConfiguration.Services.Add(typeof(IExceptionLogger), new WebExceptionLogger());

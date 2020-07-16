@@ -7,6 +7,8 @@ namespace SenseNet.TaskManagement.Core.Configuration
     /// </summary>
     public class AppAuthSection : ConfigurationSection
     {
+        //UNDONE: refactor or remove old auth config section
+
         /// <summary>
         /// Configuration section xpath.
         /// </summary>

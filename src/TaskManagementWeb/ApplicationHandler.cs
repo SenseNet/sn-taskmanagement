@@ -162,6 +162,8 @@ namespace SenseNet.TaskManagement.Web
 
         private static HttpClient GetHttpClient(string appId)
         {
+            //UNDONE: Repo app request authentication: get auth token for appId and set it in a header
+
             // get user name and password if configured
             var user = Configuration.GetUserCredentials(appId);
 

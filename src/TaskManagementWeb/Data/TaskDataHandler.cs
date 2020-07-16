@@ -140,6 +140,8 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         //================================================================================= Manage tasks
 
+        //TODO: add data handler instance API to avoid static configuration
+
         public static SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetUnfinishedTasks: appId: " + (appId ?? "") + ", tag: " + (tag ?? ""));
