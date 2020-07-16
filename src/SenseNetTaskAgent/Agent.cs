@@ -63,16 +63,16 @@ namespace SenseNet.TaskManagement.TaskAgent
                 return _executorVersions;
             }
         }
- 
+
+        private  static AgentConfiguration AgentConfig { get; set; } = new AgentConfiguration();
 
         static async Task Main(string[] args)
         {
-            //UNDONE: bind and use configuration
             IConfiguration config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json", true, true)
                 .Build();
-
-            Configuration.TaskManagementUrl = config["sensenet:TaskManagementUrl"];
+            
+            config.GetSection("TaskManagement").Bind(AgentConfig);
 
             SnLog.Instance = new SnFileSystemEventLogger();
             SnTrace.SnTracers.Add(new SnFileSystemTracer());
@@ -86,11 +86,8 @@ namespace SenseNet.TaskManagement.TaskAgent
             {
                 DiscoverCapabilities();
 
-                _updateLockPeriodInMilliseconds = Configuration.UpdateLockPeriodInSeconds * 1000;
-                _updateLockTimer = new Timer(new TimerCallback(UpdateLockTimerElapsed));
-
-                _watchExecutorPeriodInMilliseconds = Configuration.ExecutorTimeoutInSeconds * 1000;
-                _watchExecutorTimer = new Timer(new TimerCallback(WatchExecutorTimerElapsed));
+                _updateLockTimer = new Timer(UpdateLockTimerElapsed);
+                _watchExecutorTimer = new Timer(WatchExecutorTimerElapsed);
 
                 var started = await StartSignalR();
 
@@ -105,7 +102,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                         return;
                 }
 
-                _heartBeatTimerPeriodInMilliseconds = Configuration.HeartbeatPeriodInSeconds * 1000;
+                _heartBeatTimerPeriodInMilliseconds = AgentConfig.HeartbeatPeriodInSeconds * 1000;
                 _heartbeatTimer = new Timer(HeartBeatTimerElapsed, null, _heartBeatTimerPeriodInMilliseconds, _heartBeatTimerPeriodInMilliseconds);
 
                 // TODO: update mechanism
@@ -135,9 +132,9 @@ namespace SenseNet.TaskManagement.TaskAgent
             foreach(var item in Configuration.ExpliciteExecutors)
                 executors.Add(item.Key, item.Value);
 
-            if (Directory.Exists(Configuration.TaskExecutorDirectory))
+            if (Directory.Exists(AgentConfig.TaskExecutorDirectory))
             {
-                foreach (var executorDirectory in Directory.GetDirectories(Configuration.TaskExecutorDirectory))
+                foreach (var executorDirectory in Directory.GetDirectories(AgentConfig.TaskExecutorDirectory))
                 {
                     var dirName = Path.GetFileName(executorDirectory);
                     var exeName = GetExecutorExeName(dirName);
@@ -165,7 +162,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                 await _hubConnection.DisposeAsync();
 
             _hubConnection = new HubConnectionBuilder()
-                .WithUrl(Configuration.TaskManagementUrl.TrimEnd('/') + "/" + Hub.Name)
+                .WithUrl(AgentConfig.TaskManagementUrl.TrimEnd('/') + "/" + Hub.Name)
                 .WithAutomaticReconnect(new InfiniteRetryPolicy())
                 .Build();
 
@@ -216,13 +213,13 @@ namespace SenseNet.TaskManagement.TaskAgent
             ServicePointManager.DefaultConnectionLimit = 10;
 
             SnTrace.TaskManagement.Write($"Agent {AgentName} is CONNECTING to " +
-                                         $"{Configuration.TaskManagementUrl}...");
+                                         $"{AgentConfig.TaskManagementUrl}...");
 
             try
             {
                 await _hubConnection.StartAsync().ConfigureAwait(false);
 
-                SnLog.WriteInformation($"Agent {AgentName} is CONNECTED to {Configuration.TaskManagementUrl}.", 
+                SnLog.WriteInformation($"Agent {AgentName} is CONNECTED to {AgentConfig.TaskManagementUrl}.", 
                     EventId.TaskManagement.Communication);
 
                 var msg = $"Agent {AgentName} works in {_serverContext.ServerType.ToString().ToLower()} " +
@@ -375,10 +372,10 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         // continuous lock support
         private static Timer _updateLockTimer;
-        private static int _updateLockPeriodInMilliseconds;
         private static void StartLockTimer()
         {
-            _updateLockTimer.Change(_updateLockPeriodInMilliseconds, _updateLockPeriodInMilliseconds);
+            var updateLockPeriodInMilliseconds = AgentConfig.UpdateLockPeriodInSeconds * 1000;
+            _updateLockTimer.Change(updateLockPeriodInMilliseconds, updateLockPeriodInMilliseconds);
         }
         private static void StopLockTimer()
         {
@@ -404,10 +401,10 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         // watching executor support
         private static Timer _watchExecutorTimer;
-        private static int _watchExecutorPeriodInMilliseconds;
         private static void StartWatcherTimer()
         {
-            _watchExecutorTimer.Change(_watchExecutorPeriodInMilliseconds, _watchExecutorPeriodInMilliseconds);
+            var watchExecutorPeriodInMilliseconds = AgentConfig.ExecutorTimeoutInSeconds * 1000;
+            _watchExecutorTimer.Change(watchExecutorPeriodInMilliseconds, watchExecutorPeriodInMilliseconds);
         }
         private static void StopWatcherTimer()
         {
@@ -415,7 +412,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         }
         private static void WatchExecutorTimerElapsed(object o)
         {
-            if (DateTime.UtcNow.AddMilliseconds(-_watchExecutorPeriodInMilliseconds) > executionStateWritten)
+            if (DateTime.UtcNow.AddMilliseconds(-(AgentConfig.ExecutorTimeoutInSeconds * 1000)) > executionStateWritten)
             {
                 var msg = string.Format( "EXECUTOR TERMINATED: {0}.", _executor.Task.Type);
                 Console.WriteLine(msg);
@@ -722,7 +719,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             {
                 using (var client = new WebClient())
                 {
-                    var packageUrl = Configuration.TaskManagementUrl.TrimEnd('/') + AgentManager.UPDATER_PACKAGEPATH;
+                    var packageUrl = AgentConfig.TaskManagementUrl.TrimEnd('/') + AgentManager.UPDATER_PACKAGEPATH;
                     var folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                     var targetFilePath = Path.Combine(folder, AgentManager.UPDATER_PACKAGENAME);
 
