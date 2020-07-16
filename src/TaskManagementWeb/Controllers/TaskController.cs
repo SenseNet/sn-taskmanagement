@@ -54,13 +54,10 @@ namespace SenseNet.TaskManagement.Controllers
             // was unreachable when the client application tried to register the appid before).
             if (app == null)
             {
-                //UNDONE: return null or error result
-                return null;
-                // throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, RegisterTaskRequest.ERROR_UNKNOWN_APPID));
+                return new RegisterTaskResult { Error = RegisterTaskRequest.ERROR_UNKNOWN_APPID };
             }
 
-            RegisterTaskResult result = null;
-
+            RegisterTaskResult result;
             try
             {
                 // calculate hash with the default algorithm if not given
@@ -81,11 +78,12 @@ namespace SenseNet.TaskManagement.Controllers
             }
             catch (Exception ex)
             {
-                //UNDONE: the client app needs to be notified
-                // Consider returning a result object with an error message, or IActionResult
-                return null;
+                var msg = $"Task registration failed. {ex.Message} AppId: {app.AppId}, " +
+                          $"Task: {taskRequest.Type}, Title: {taskRequest.Title}";
 
-                //throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
+                SnLog.WriteException(ex, msg);
+
+                return new RegisterTaskResult { Error = RegisterTaskResult.ErrorTaskRegistrationFailed };
             }
 
             try
@@ -114,21 +112,28 @@ namespace SenseNet.TaskManagement.Controllers
         /// </summary>
         /// <param name="appRequest">Contains the necessary information for registering an application.</param>
         [HttpPost]        
-        public void RegisterApplication([FromBody]RegisterApplicationRequest appRequest)
+        public RegisterApplicationResult RegisterApplication([FromBody]RegisterApplicationRequest appRequest)
         {
             try
             {
-                var app = TaskDataHandler.RegisterApplication(appRequest);
+                var _ = TaskDataHandler.RegisterApplication(appRequest);
             }
             catch (Exception ex)
             {
-                //UNDONE: the client app needs to be notified
-                return;
-                //throw new HttpResponseException(Request.CreateErrorResponse(HttpStatusCode.NotFound, ex));
+                SnLog.WriteException(ex, $"Error during app registration. AppId: {appRequest?.AppId}, " +
+                                         $"Url: {appRequest?.ApplicationUrl}");
+
+                return new RegisterApplicationResult
+                {
+                    Success = false,
+                    Error = ex.Message
+                };
             }
 
             // invalidate app cache
             ApplicationHandler.Reset();
+
+            return new RegisterApplicationResult();
         }
 
         private static Int64 ComputeTaskHash(string data)

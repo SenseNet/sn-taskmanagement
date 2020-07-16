@@ -45,6 +45,17 @@ namespace SenseNet.TaskManagement.Web
 
             //UNDONE: use config binding
             Web.Configuration.ConnectionString = Configuration.GetConnectionString("TaskDatabase");
+
+            //TODO: inject allowed origins dynamically (do not allow everything)
+            services.AddCors(c =>
+            {
+                c.AddPolicy("AllowAllOrigins", options =>
+                {
+                    options.AllowAnyOrigin();
+                    options.AllowAnyHeader();
+                    options.AllowAnyMethod();
+                });
+            });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -69,9 +80,10 @@ namespace SenseNet.TaskManagement.Web
 
             app.UseRouting();
 
-            app.UseAuthorization();
+            //TODO: inject allowed origins dynamically (do not allow everything)
+            app.UseCors("AllowAllOrigins");
 
-            //UNDONE: use CORS (allow everything for now)
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
@@ -105,16 +117,8 @@ namespace SenseNet.TaskManagement.Web
             //    {
             //        ContractResolver = new CamelCasePropertyNamesContractResolver()
             //    };
-
-            //UNDONE: Web API routes (moved here from WebApiConfig)
-            //httpConfiguration.MapHttpAttributeRoutes();
             
-            //httpConfiguration.Routes.MapHttpRoute(
-            //    name: "TaskManagementApi",
-            //    routeTemplate: "api/{controller}/{action}/{id}",
-            //    defaults: new { id = RouteParameter.Optional });
-
-            //UNDONE: configure global error logging
+            //TODO: configure global error logging
             //httpConfiguration.Services.Add(typeof(IExceptionLogger), new WebExceptionLogger());
             
             SnLog.WriteInformation("SenseNet TaskManagement app started.", EventId.TaskManagement.Lifecycle);
@@ -122,37 +126,5 @@ namespace SenseNet.TaskManagement.Web
             // load apps
             ApplicationHandler.Initialize();
         }
-
-        //===================================================================== Application initialization
-        
-        //UNDONE: set up error handling
-
-        //private static void ConfigureErrorHandling()
-        //{
-        //    // load the ASP.NET setting from the web.config
-        //    var config = (CustomErrorsSection)ConfigurationManager.GetSection("system.web/customErrors");
-        //    if (config == null)
-        //        return;
-
-        //    IncludeErrorDetailPolicy errorDetailPolicy;
-
-        //    switch (config.Mode)
-        //    {
-        //        case CustomErrorsMode.RemoteOnly:
-        //            errorDetailPolicy = IncludeErrorDetailPolicy.LocalOnly;
-        //            break;
-        //        case CustomErrorsMode.On:
-        //            errorDetailPolicy = IncludeErrorDetailPolicy.Never;
-        //            break;
-        //        case CustomErrorsMode.Off:
-        //            errorDetailPolicy = IncludeErrorDetailPolicy.Always;
-        //            break;
-        //        default:
-        //            throw new ArgumentOutOfRangeException();
-        //    }
-
-        //    // configure Web API according to the ASP.NET configuration
-        //    GlobalConfiguration.Configuration.IncludeErrorDetailPolicy = errorDetailPolicy;
-        //}
     }
 }

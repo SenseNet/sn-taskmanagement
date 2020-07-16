@@ -11,7 +11,7 @@ namespace TestExecutor
             var subtask = new SnSubtask("Thinking hard", "Pretending to do something.");
             subtask.Start();
 
-            var count = new Random().Next(5, 15);
+            var count = new Random().Next(10, 15);
             for (var i = 0; i < count; i++)
             {
                 Thread.Sleep(1000);

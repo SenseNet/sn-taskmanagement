@@ -59,7 +59,9 @@ namespace SenseNet.TaskManagement.Core
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return JsonConvert.DeserializeObject<RegisterTaskResult>(responseText);
+                    var result = JsonConvert.DeserializeObject<RegisterTaskResult>(responseText);
+                    if (!string.IsNullOrEmpty(result?.Error))
+                        throw new TaskManagementException(result.Error, requestData.AppId, null);
                 }
                 else
                 {
@@ -113,7 +115,14 @@ namespace SenseNet.TaskManagement.Core
                 responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                 if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonConvert.DeserializeObject<RegisterApplicationResult>(responseText);
+                    if (!string.IsNullOrEmpty(result?.Error))
+                        throw new TaskManagementException(result.Error, 
+                            requestData.AppId, null);
+
                     return;
+                }
             }
             catch (Exception ex)
             {

@@ -7,6 +7,8 @@ namespace SenseNet.TaskManagement.Core
     /// </summary>
     public class RegisterTaskResult
     {
+        public static readonly string ErrorTaskRegistrationFailed = "TaskRegistrationFailed";
+
         /// <summary>
         /// The task that was created or updated.
         /// </summary>
@@ -19,6 +21,7 @@ namespace SenseNet.TaskManagement.Core
         /// True if the task existed before and was only updated by this register request.
         /// </summary>
         public bool Updated { get; set; }
+        public string Error { get; set; }
     }
 
     /// <summary>
