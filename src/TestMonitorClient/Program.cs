@@ -10,7 +10,7 @@ namespace TestMonitorClient
         static async Task Main(string[] args)
         {
             var connection = new HubConnectionBuilder()
-                .WithUrl("https://localhost:5001/monitorhub?appid=app123")
+                .WithUrl("https://localhost:5001/monitorhub?appid=SenseNet")
                 .Build();
 
             connection.Closed += async error =>
