@@ -140,13 +140,15 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         //================================================================================= Manage tasks
 
+        //TODO: add data handler instance API to avoid static configuration
+
         public static SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetUnfinishedTasks: appId: " + (appId ?? "") + ", tag: " + (tag ?? ""));
 
             try
             {
-                using (var cn = new SqlConnection(Configuration.ConnectionString))
+                using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
                 using (var cm = cn.CreateCommand())
                 {
                     cm.CommandType = CommandType.Text;
@@ -182,7 +184,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             try
             {
-                using (var cn = new SqlConnection(Configuration.ConnectionString))
+                using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
                 using (var cm = cn.CreateCommand())
                 {
                     cm.CommandType = CommandType.Text;
@@ -279,7 +281,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         }
         private static RegisterTaskResult RegisterTask(string type, string title, double order, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             {
                 cn.Open();
                 var tran = cn.BeginTransaction();
@@ -295,9 +297,9 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                     cm1.Parameters.Add("@Type", SqlDbType.NVarChar).Value = type;
                     cm1.Parameters.Add("@Title", SqlDbType.NVarChar).Value = title;
                     cm1.Parameters.Add("@Order", SqlDbType.Float).Value = order;
-                    cm1.Parameters.Add("@Tag", SqlDbType.NVarChar).Value = tag;
+                    cm1.Parameters.Add("@Tag", SqlDbType.NVarChar).Value = (object)tag ?? DBNull.Value;
                     cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = (object)appId ?? DBNull.Value;
-                    cm1.Parameters.Add("@FinalizeUrl", SqlDbType.NVarChar).Value = finalizeUrl;
+                    cm1.Parameters.Add("@FinalizeUrl", SqlDbType.NVarChar).Value = (object)finalizeUrl ?? DBNull.Value;
                     cm1.Parameters.Add("@Hash", SqlDbType.BigInt).Value = hash;
                     cm1.Parameters.Add("@TaskData", SqlDbType.NVarChar).Value = taskDataSerialized;
 
@@ -360,7 +362,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         {
             SnTrace.TaskManagement.Write("TaskDataHandler FinalizeTask: " + (taskResult.Successful ? "Done" : "Error") + ", Id: " + taskResult.Task.Id);
 
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(DELETETASKSQL, cn) { CommandType = System.Data.CommandType.Text })
             {
                 cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskResult.Task.Id;
@@ -372,7 +374,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         public static void RefreshLock(int taskId)
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(REFRESHLOCKSQL, cn) { CommandType = System.Data.CommandType.Text })
             {
                 cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskId;
@@ -384,11 +386,11 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         public static SnTask GetNextAndLock(string machineName, string agentName, string[] capabilities)
         {
             var sql = String.Format(GETANDLOCKSQL, String.Join("', '", capabilities));
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(sql, cn) { CommandType = System.Data.CommandType.Text })
             {
                 cm.Parameters.Add("@LockedBy", SqlDbType.NVarChar, 450).Value = agentName;
-                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Configuration.TaskExecutionTimeoutInSeconds);
+                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Web.Configuration.TaskExecutionTimeoutInSeconds);
 
                 cn.Open();
                 var reader = cm.ExecuteReader();
@@ -417,10 +419,10 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         }
         public static int GetDeadTaskCount()
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(GETDEADTASKSSQL, cn) { CommandType = System.Data.CommandType.Text })
             {
-                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Configuration.TaskExecutionTimeoutInSeconds);
+                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Web.Configuration.TaskExecutionTimeoutInSeconds);
                 cn.Open();
                 var result = (int)cm.ExecuteScalar();
                 SnTrace.TaskManagement.Write("TaskDataHandler GetDeadTasks. Count: " + result);
@@ -441,7 +443,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         public static Application RegisterApplication(RegisterApplicationRequest request)
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
+            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             {
                 SqlCommand cm1 = null;
 
@@ -500,24 +502,21 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         public static Application[] Getapplications()
         {
-            using (var cn = new SqlConnection(Configuration.ConnectionString))
-            {
-                using (var cm = cn.CreateCommand())
-                {
-                    cm.CommandType = CommandType.Text;
-                    cm.CommandText = LOADAPPLICATIONSSQL;
+            using var cn = new SqlConnection(Web.Configuration.ConnectionString);
+            using var cm = cn.CreateCommand();
 
-                    cn.Open();
+            cm.CommandType = CommandType.Text;
+            cm.CommandText = LOADAPPLICATIONSSQL;
 
-                    var reader = cm.ExecuteReader();
-                    var result = new List<Application>();
+            cn.Open();
 
-                    while (reader.Read())
-                        result.Add(GetApplicationFromReader(reader));
+            var reader = cm.ExecuteReader();
+            var result = new List<Application>();
 
-                    return result.ToArray();
-                }
-            }
+            while (reader.Read())
+                result.Add(GetApplicationFromReader(reader));
+
+            return result.ToArray();
         }
 
         private static Application GetApplicationFromReader(SqlDataReader reader)
@@ -594,7 +593,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             SqlConnection cn = null;
             if (cm == null)
             {
-                cn = new SqlConnection(Configuration.ConnectionString);
+                cn = new SqlConnection(Web.Configuration.ConnectionString);
                 cm = cn.CreateCommand();
                 cm.Connection = cn;
                 cn.Open();
@@ -607,9 +606,9 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 cm.CommandText = @"INSERT INTO TaskEvents ( EventType,  EventTime,  SubtaskId,  Title,  Details,  AppId,  Machine,  Agent,  Tag,  TaskId,  TaskType,  TaskOrder,   TaskHash,  TaskData ) VALUES
                                                           (@EventType, GETUTCDATE(), @SubtaskId, @Title, @Details, @AppId, @Machine, @Agent, @Tag, @TaskId, @TaskType, @TaskOrder,  @TaskHash, @TaskData )";
 
-                cm.Parameters.Add("@EventType", SqlDbType.NVarChar).Value = eventType.ToString();
+                cm.Parameters.Add("@EventType", SqlDbType.NVarChar).Value = eventType;
                 cm.Parameters.Add("@SubTaskId", SqlDbType.UniqueIdentifier).Value = subtaskId.HasValue ? (object)subtaskId.Value : DBNull.Value;
-                cm.Parameters.Add("@Title", SqlDbType.NVarChar).Value = title;
+                cm.Parameters.Add("@Title", SqlDbType.NVarChar).Value = (object)title ?? DBNull.Value;
                 cm.Parameters.Add("@Details", SqlDbType.NVarChar).Value = (object)details ?? DBNull.Value;
                 cm.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = (object)appId ?? DBNull.Value;
                 cm.Parameters.Add("@Machine", SqlDbType.NVarChar).Value = (object)machine ?? DBNull.Value;

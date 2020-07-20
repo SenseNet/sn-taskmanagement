@@ -63,13 +63,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SenseNetTaskAgent\SenseNetTaskAgent.csproj">
-      <Project>{ab82332d-9a17-4e1f-b847-74fc7c74e21f}</Project>
-      <Name>SenseNetTaskAgent</Name>
-    </ProjectReference>
+    <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <ProjectReference Include="..\TaskManagement.Core\SenseNet.TaskManagement.Core.csproj">
+      <Project>{E8335731-1E4F-4DAC-99ED-CD9BCCF686CB}</Project>
+      <Name>SenseNet.TaskManagement.Core</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

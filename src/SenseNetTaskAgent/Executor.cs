@@ -82,6 +82,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             if (string.IsNullOrEmpty(workerExe) || !File.Exists(workerExe))
                 throw new TaskManagementException("Task executor command was not found", task.AppId, task.Id, task.Type);
 
+            //UNDONE: pass on client id and secret to the executor, or configure the, there
             var user = Configuration.GetUserCredentials(task.AppId);
             var userParameter = "USERNAME:\"" + (user != null ? user.UserName : string.Empty) + "\"";
             var passwordParameter = "PASSWORD:\"" + (user != null ? user.Password : string.Empty) + "\"";

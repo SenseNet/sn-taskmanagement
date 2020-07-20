@@ -1,6 +1,5 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SenseNet.TaskManagement.TaskAgent;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SenseNet.TaskManagement.Core;
 
 namespace Tests
 {

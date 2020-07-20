@@ -1,17 +1,21 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2036
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Web", "TaskManagementWeb\TaskManagement.Web.csproj", "{3C8583A1-B19B-4664-A957-F1514D21ECF6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SenseNet.TaskManagement.Core", "TaskManagement.Core\SenseNet.TaskManagement.Core.csproj", "{E8335731-1E4F-4DAC-99ED-CD9BCCF686CB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SenseNet.TaskManagement.Core", "TaskManagement.Core\SenseNet.TaskManagement.Core.csproj", "{E8335731-1E4F-4DAC-99ED-CD9BCCF686CB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SenseNetTaskAgent", "SenseNetTaskAgent\SenseNetTaskAgent.csproj", "{AB82332D-9A17-4E1F-B847-74FC7C74E21F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SenseNetTaskAgent", "SenseNetTaskAgent\SenseNetTaskAgent.csproj", "{AB82332D-9A17-4E1F-B847-74FC7C74E21F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SenseNetTaskAgentService", "SenseNetTaskAgentService\SenseNetTaskAgentService.csproj", "{2B1C7EFE-BB2F-45D7-B723-1555DE2245ED}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{17B7CDE2-2090-439F-8426-2AA2ACC34202}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestExecutor", "TestExecutor\TestExecutor.csproj", "{A4F690FC-1CC5-48C4-BA9D-05E483BA3B3B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestMonitorClient", "TestMonitorClient\TestMonitorClient.csproj", "{BE0D85F5-0791-4E15-AD53-D6D3986FB202}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,8 +38,8 @@ Global
 		{E8335731-1E4F-4DAC-99ED-CD9BCCF686CB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Diagnostic|Any CPU.ActiveCfg = Diagnostic|Any CPU
-		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Diagnostic|Any CPU.Build.0 = Diagnostic|Any CPU
+		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Diagnostic|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Diagnostic|Any CPU.Build.0 = Debug|Any CPU
 		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AB82332D-9A17-4E1F-B847-74FC7C74E21F}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2B1C7EFE-BB2F-45D7-B723-1555DE2245ED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -50,6 +54,18 @@ Global
 		{17B7CDE2-2090-439F-8426-2AA2ACC34202}.Diagnostic|Any CPU.Build.0 = Debug|Any CPU
 		{17B7CDE2-2090-439F-8426-2AA2ACC34202}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{17B7CDE2-2090-439F-8426-2AA2ACC34202}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4F690FC-1CC5-48C4-BA9D-05E483BA3B3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4F690FC-1CC5-48C4-BA9D-05E483BA3B3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4F690FC-1CC5-48C4-BA9D-05E483BA3B3B}.Diagnostic|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4F690FC-1CC5-48C4-BA9D-05E483BA3B3B}.Diagnostic|Any CPU.Build.0 = Debug|Any CPU
+		{A4F690FC-1CC5-48C4-BA9D-05E483BA3B3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4F690FC-1CC5-48C4-BA9D-05E483BA3B3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Diagnostic|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Diagnostic|Any CPU.Build.0 = Debug|Any CPU
+		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security;
 using System.Text;
 using System.Threading.Tasks;
+using IdentityModel.Client;
 using Newtonsoft.Json;
+using SenseNet.Client;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Core.Configuration;
@@ -91,7 +94,14 @@ namespace SenseNet.TaskManagement.Web
             if (string.IsNullOrEmpty(finalizeUrl))
                 return;
 
-            using (var client = GetHttpClient(result.Task.AppId))
+            SnTrace.TaskManagement.Write($"Sending finalize notification. AppId: {result.Task.AppId}." +
+                                         $"Agent: {result.AgentName}, " +
+                                         $"Task: {result.Task.Id}, Type: {result.Task.Type}, " +
+                                         $"task success: {result.Successful}");
+
+            var app = GetApplication(result.Task.AppId);
+
+            using (var client = await GetHttpClient(app.ApplicationUrl))
             {
                 // create post data
                 var content = new StringContent(JsonConvert.SerializeObject(new
@@ -132,7 +142,8 @@ namespace SenseNet.TaskManagement.Web
                 return false;
             }
 
-            using (var client = GetHttpClient(appId))
+            //UNDONE: make this method async
+            using (var client = GetHttpClient(app.ApplicationUrl).GetAwaiter().GetResult())
             {
                 try
                 {
@@ -155,30 +166,33 @@ namespace SenseNet.TaskManagement.Web
 
         //============================================================================ Helper methods
 
-        private static HttpClient GetHttpClient(string appId)
+        private static async Task<HttpClient> GetHttpClient(string appUrl)
         {
-            // get user name and password if configured
-            var user = Configuration.GetUserCredentials(appId);
-
-            SnTrace.TaskManagement.Write("AgentHub GetHttpClient user credentials for appid {0}: {1}.", appId, user == null ? "null" : "basic");
-
-            // basic or windows authentication, based on the configured user
-            var clientHandler = user == null
-                ? new HttpClientHandler { UseDefaultCredentials = true }
-                : new HttpClientHandler();
-
-            var client = new HttpClient(clientHandler);
+            // repo app request authentication: get auth token for appId and set it in a header
+            var client = new HttpClient();
 
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            // add basic auth header if necessary
-            if (user != null)
-                client.DefaultRequestHeaders.Authorization = GetBasicAuthenticationHeader(user);
+            //UNDONE: IsTrusted only in dev environment
+            var server = new Client.ServerContext
+            {
+                Url = appUrl,
+                IsTrusted = true,
+            };
+
+            var authority = await GetAuthorityUrl(server).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(authority))
+                throw new SecurityException($"Authority could not be found for repository {appUrl}.");
+
+            var accessToken = await GetTokenAsync(authority).ConfigureAwait(false);
+
+            // add auth header
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
             return client;
         }
-
+        
         private static AuthenticationHeaderValue GetBasicAuthenticationHeader(UserCredentials user)
         {
             if (user == null)
@@ -188,6 +202,66 @@ namespace SenseNet.TaskManagement.Web
                 Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format(@"{0}:{1}",
                 user.UserName,
                 user.Password))));
+        }
+
+
+
+        //UNDONE: remove temp token methods and use the official client library when available
+
+        private static async Task<string> GetTokenAsync(string authority)
+        {
+            var client = new System.Net.Http.HttpClient();
+            var disco = await client.GetDiscoveryDocumentAsync(authority).ConfigureAwait(false);
+            if (disco.IsError)
+            {
+                //TODO: log
+                return string.Empty;
+            }
+
+            // request token
+            var tokenResponse = await client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
+            {
+                Address = disco.TokenEndpoint,
+
+                //UNDONE: obtain repository-specific secret
+                ClientId = "client",
+                ClientSecret = "secret",
+                Scope = "sensenet"
+            });
+
+            if (tokenResponse.IsError)
+            {
+                //TODO: log
+                return string.Empty;
+            }
+
+            return tokenResponse.AccessToken;
+        }
+
+        private static async Task<string> GetAuthorityUrl(Client.ServerContext server)
+        {
+            var req = new ODataRequest(server)
+            {
+                Path = "/Root",
+                ActionName = "GetClientRequestParameters"
+            };
+
+            //UNDONE: maybe the client type should be configurable
+            req.Parameters.Add("clientType", "client");
+
+            try
+            {
+                dynamic response = await RESTCaller.GetResponseJsonAsync(req, server)
+                    .ConfigureAwait(false);
+
+                return response.authority;
+            }
+            catch (Exception ex)
+            {
+                SnTrace.System.WriteError($"Could not access repository {server.Url} for getting the authority url. {ex.Message}");
+            }
+
+            return string.Empty;
         }
     }
 }

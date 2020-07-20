@@ -273,11 +273,11 @@ namespace SenseNet.TaskManagement.Core
         /// <summary>
         /// Machine name.
         /// </summary>
-        public string Machine;
+        public string Machine { get; set; }
         /// <summary>
         /// Agent name.
         /// </summary>
-        public string Agent;
+        public string Agent { get; set; }
         /// <summary>
         /// Event time.
         /// </summary>
@@ -285,27 +285,27 @@ namespace SenseNet.TaskManagement.Core
         /// <summary>
         /// Agent process id.
         /// </summary>
-        public int ProcessId;
+        public int ProcessId { get; set; }
         /// <summary>
         /// CPU performance counter value.
         /// </summary>
-        public double CPU;
+        public double CPU { get; set; }
         /// <summary>
         /// RAM performance counter value.
         /// </summary>
-        public int RAM;
+        public int RAM { get; set; }
         /// <summary>
         /// Physical memory size on the agent machine.
         /// </summary>
-        public ulong TotalRAM;
+        public ulong TotalRAM { get; set; }
         /// <summary>
         /// Agent process start time.
         /// </summary>
-        public DateTime StartTime;
+        public DateTime StartTime { get; set; }
         /// <summary>
         /// Event type.
         /// </summary>
-        public string EventType;
+        public string EventType { get; set; }
 
         /// <summary>
         /// Serializes this object to JSON.

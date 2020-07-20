@@ -56,17 +56,17 @@ namespace SenseNet.TaskManagement.Core
         /// Subtask identifier.
         /// </summary>
         [JsonProperty("id")]
-        public Guid Id { get; }
+        public Guid Id { get; set; }
         /// <summary>
         /// Subtask title.
         /// </summary>
         [JsonProperty("t")]
-        public string Title { get; private set; }
+        public string Title { get; set; }
         /// <summary>
         /// Subtask details.
         /// </summary>
         [JsonProperty("d")]
-        public string Details { get; private set; }
+        public string Details { get; set; }
 
         /// <summary>
         /// Initializes an instance of the SnSubtask class.
