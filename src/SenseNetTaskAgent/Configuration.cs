@@ -33,7 +33,7 @@ namespace SenseNet.TaskManagement.TaskAgent
     }
     internal class Configuration
     {
-        //UNDONE: modernize authentication configuration
+        //UNDONE: modernize authentication configuration: use token secret
 
         private const string USERNAMEKEY = "Username";
         private static string _username;

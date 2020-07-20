@@ -56,6 +56,7 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
+        //UNDONE: refactor: remove unused methods like this one
         public static UserCredentials GetUserCredentials(string appId)
         {
             return AppAuthSection.GetUserCredentials(appId);

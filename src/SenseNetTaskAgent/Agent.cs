@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -20,6 +19,8 @@ namespace SenseNet.TaskManagement.TaskAgent
 {
     internal class Agent
     {
+        //UNDONE: cleanup and refactor
+
         internal static string AgentName { get; private set; } = Guid.NewGuid().ToString();
         private static object _workingsync = new object();
         private static bool _working;
@@ -710,6 +711,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             Environment.Exit(0);
         }
 
+        //UNDONE remove the obsolete update feature
         private static void DownloadUpdatePackage()
         {
             SnLog.WriteInformation($"Task#Starting to download update package on agent {Agent.AgentName}.",
@@ -748,7 +750,7 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         private static ulong GetTotalPhysicalMemory()
         {
-            //UNDONE: get physical memory
+            //UNDONE: get physical memory (no official .Net Core solution yet)
             //return new Microsoft.VisualBasic.Devices.ComputerInfo().TotalPhysicalMemory / (1024 * 1024);
             return 0;
         }

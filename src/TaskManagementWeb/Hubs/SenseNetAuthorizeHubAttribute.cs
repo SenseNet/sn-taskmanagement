@@ -10,7 +10,7 @@ namespace SenseNet.TaskManagement.Hubs
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
     internal class SenseNetAuthorizeHubAttribute : AuthorizeAttribute
     {
-        //UNDONE: authentication/authorization
+        //UNDONE: authentication/authorization for hub clients
 
         //protected override bool UserAuthorized(System.Security.Principal.IPrincipal user)
         //{
