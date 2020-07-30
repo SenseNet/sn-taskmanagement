@@ -8,13 +8,14 @@ using System.Data.SqlClient;
 using System.Data;
 using System.Diagnostics;
 using System.Text;
+using Microsoft.Extensions.Options;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Web;
 
 namespace SenseNet.TaskManagement.Data
 {
-    public static class TaskDataHandler
+    public class TaskDataHandler
     {
         #region SQL SCRIPTS
 
@@ -140,9 +141,14 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         //================================================================================= Manage tasks
 
+        private readonly TaskManagementConfiguration _config;
         //TODO: add data handler instance API to avoid static configuration
+        public TaskDataHandler(IOptions<TaskManagementConfiguration> config)
+        {
+            _config = config.Value;
+        }
 
-        public static SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
+        public SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetUnfinishedTasks: appId: " + (appId ?? "") + ", tag: " + (tag ?? ""));
 
@@ -178,7 +184,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 throw new TaskManagementException("Error during getting unfinished tasks.", ex);
             }
         }
-        public static SnTaskEvent[] GetDetailedTaskEvents(string appId, string tag, int taskId)
+        public SnTaskEvent[] GetDetailedTaskEvents(string appId, string tag, int taskId)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetDetailedTaskEvents: appId: " + (appId ?? "") + ", tag: " + (tag ?? "") + ", taskId: " + taskId);
 
@@ -214,7 +220,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 throw new TaskManagementException("Error during getting task events.", ex);
             }
         }
-        private static SnTaskEvent GetTaskEventFromReader(SqlDataReader reader)
+        private SnTaskEvent GetTaskEventFromReader(SqlDataReader reader)
         {
             return new SnTaskEvent
             {
@@ -236,7 +242,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             };
         }
 
-        public static RegisterTaskResult RegisterTask(string type, string title, TaskPriority priority, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
+        public RegisterTaskResult RegisterTask(string type, string title, TaskPriority priority, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
         {
             double order = double.NaN;
             switch (priority)
@@ -279,7 +285,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             return result;
         }
-        private static RegisterTaskResult RegisterTask(string type, string title, double order, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
+        private RegisterTaskResult RegisterTask(string type, string title, double order, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
         {
             using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             {
@@ -358,7 +364,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             }
         }
 
-        public static void FinalizeTask(SnTaskResult taskResult)
+        public void FinalizeTask(SnTaskResult taskResult)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler FinalizeTask: " + (taskResult.Successful ? "Done" : "Error") + ", Id: " + taskResult.Task.Id);
 
@@ -372,7 +378,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             WriteFinishExecutionEvent(taskResult);
         }
 
-        public static void RefreshLock(int taskId)
+        public void RefreshLock(int taskId)
         {
             using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(REFRESHLOCKSQL, cn) { CommandType = System.Data.CommandType.Text })
@@ -383,7 +389,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 cm.ExecuteNonQuery();
             }
         }
-        public static SnTask GetNextAndLock(string machineName, string agentName, string[] capabilities)
+        public SnTask GetNextAndLock(string machineName, string agentName, string[] capabilities)
         {
             var sql = String.Format(GETANDLOCKSQL, String.Join("', '", capabilities));
             using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
@@ -417,7 +423,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 return null;
             }
         }
-        public static int GetDeadTaskCount()
+        public int GetDeadTaskCount()
         {
             using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             using (var cm = new SqlCommand(GETDEADTASKSSQL, cn) { CommandType = System.Data.CommandType.Text })
@@ -430,18 +436,18 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             }
         }
 
-        public static void StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public void StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
         {
             WriteStartSubtaskEvent(subtask, task, machineName, agentName);
         }
-        public static void FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public void FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
         {
             WriteFinishSubtaskEvent(subtask, task, machineName, agentName);
         }
 
         //================================================================================= Manage applications
 
-        public static Application RegisterApplication(RegisterApplicationRequest request)
+        public Application RegisterApplication(RegisterApplicationRequest request)
         {
             using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
             {
@@ -500,7 +506,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             }
         }
 
-        public static Application[] Getapplications()
+        public Application[] GetApplications()
         {
             using var cn = new SqlConnection(Web.Configuration.ConnectionString);
             using var cm = cn.CreateCommand();
@@ -519,7 +525,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             return result.ToArray();
         }
 
-        private static Application GetApplicationFromReader(SqlDataReader reader)
+        private Application GetApplicationFromReader(SqlDataReader reader)
         {
             var app = new Application
             {
@@ -545,7 +551,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         //================================================================================= Write events
 
-        private static void WriteRegisterTaskEvent(RegisterTaskResult result, string machineName, SqlCommand command)
+        private void WriteRegisterTaskEvent(RegisterTaskResult result, string machineName, SqlCommand command)
         {
             var task = result.Task;
             WriteEvent(command, result.NewlyCreated ? TaskEventType.Registered : TaskEventType.Updated, task.Id,
@@ -553,14 +559,14 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 task.AppId, machineName, null,
                 task.Tag, task.Type, task.Order, task.Hash, task.TaskData);
         }
-        private static void WriteStartExecutionEvent(SnTask task, string machineName, string agentName)
+        private void WriteStartExecutionEvent(SnTask task, string machineName, string agentName)
         {
             var message = "Agent " + task.LockedBy + " started a task execution.";
             WriteEvent(null, TaskEventType.Started, task.Id, null, task.Title, null, task.AppId,
                  machineName, agentName, task.Tag,
                  null, null, null, null);
         }
-        private static void WriteFinishExecutionEvent(SnTaskResult taskResult)
+        private void WriteFinishExecutionEvent(SnTaskResult taskResult)
         {
             var task = taskResult.Task;
             WriteEvent(null,
@@ -575,18 +581,18 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 task.Tag,
                 null, null, null, null);
         }
-        private static void WriteStartSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
+        private void WriteStartSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
         {
             WriteEvent(null, TaskEventType.SubtaskStarted, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
                 , null, null, null, null);
         }
-        private static void WriteFinishSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
+        private void WriteFinishSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
         {
             WriteEvent(null, TaskEventType.SubtaskFinished, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
                 , null, null, null, null);
         }
 
-        private static void WriteEvent(SqlCommand cm, string eventType, int taskId, Guid? subtaskId, string title, string details,
+        private void WriteEvent(SqlCommand cm, string eventType, int taskId, Guid? subtaskId, string title, string details,
             string appId, string machine, string agent, string tag,
             string taskType, double? taskOrder, long? taskHash, string taskData)
         {
@@ -632,28 +638,10 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                     cn.Dispose();
                 }
             }
-
         }
 
         //================================================================================= Helper methods
-
-        internal static string Serialize(object data)
-        {
-            if (data != null)
-                return null;
-
-            var serializer = new JsonSerializer();
-            serializer.Converters.Add(new JavaScriptDateTimeConverter());
-            serializer.NullValueHandling = NullValueHandling.Ignore;
-
-            using (var sw = new StringWriter())
-            {
-                using (JsonWriter writer = new JsonTextWriter(sw))
-                    serializer.Serialize(writer, data);
-                return sw.GetStringBuilder().ToString();
-            }
-        }
-
+        
         private static string GetSafeString(SqlDataReader reader, int index)
         {
             if (reader.IsDBNull(index))
@@ -690,6 +678,5 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 return null;
             return reader.GetGuid(index);
         }
-
     }
 }

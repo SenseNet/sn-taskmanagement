@@ -22,13 +22,15 @@ namespace SenseNet.TaskManagement.Controllers
         private readonly IHubContext<AgentHub> _agentHub;
         private readonly IHubContext<TaskMonitorHub> _monitorHub;
         private readonly ApplicationHandler _applicationHandler;
+        private readonly TaskDataHandler _dataHandler;
 
         public TaskController(IHubContext<AgentHub> agentHub, IHubContext<TaskMonitorHub> monitorHub,
-            ApplicationHandler appHandler)
+            ApplicationHandler appHandler, TaskDataHandler dataHandler)
         {
             _agentHub = agentHub;
             _monitorHub = monitorHub;
             _applicationHandler = appHandler;
+            _dataHandler = dataHandler;
         }
 
         /// <summary>
@@ -68,7 +70,7 @@ namespace SenseNet.TaskManagement.Controllers
                     ? ComputeTaskHash(taskRequest.Type + taskRequest.AppId + taskRequest.Tag + taskRequest.TaskData)
                     : taskRequest.Hash;
 
-                result = TaskDataHandler.RegisterTask(
+                result = _dataHandler.RegisterTask(
                     taskRequest.Type,
                     taskRequest.Title,
                     taskRequest.Priority,
@@ -119,7 +121,7 @@ namespace SenseNet.TaskManagement.Controllers
         {
             try
             {
-                var _ = TaskDataHandler.RegisterApplication(appRequest);
+                var _ = _dataHandler.RegisterApplication(appRequest);
             }
             catch (Exception ex)
             {

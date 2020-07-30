@@ -60,8 +60,10 @@ namespace SenseNet.TaskManagement.Web
                 });
             });
 
+            services.AddSingleton<TaskDataHandler>();
             services.AddSenseNetClientTokenStore();
             services.AddSingleton<ApplicationHandler>();
+            services.AddHostedService<DeadTaskHostedService>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationHandler appHandler)
