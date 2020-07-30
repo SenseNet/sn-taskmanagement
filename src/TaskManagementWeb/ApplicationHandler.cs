@@ -11,6 +11,7 @@ using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
 
+// ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Web
 {
     public class ApplicationHandler
@@ -65,7 +66,7 @@ namespace SenseNet.TaskManagement.Web
         /// <summary>
         ///  Get one application by app id.
         /// </summary>
-        /// <param name="appId">Aplication id</param>
+        /// <param name="appId">Application id</param>
         public Application GetApplication(string appId)
         {
             if (string.IsNullOrEmpty(appId))
@@ -86,7 +87,7 @@ namespace SenseNet.TaskManagement.Web
 
         internal async Task SendFinalizeNotificationAsync(SnTaskResult result)
         {
-            if (result == null || result.Task == null || string.IsNullOrEmpty(result.Task.AppId))
+            if (result?.Task == null || string.IsNullOrEmpty(result.Task.AppId))
                 return;
 
             // load the finalize url from the task or a global app setting
@@ -101,32 +102,28 @@ namespace SenseNet.TaskManagement.Web
                                          $"Agent: {result.AgentName}, " +
                                          $"Task: {result.Task.Id}, Type: {result.Task.Type}, " +
                                          $"task success: {result.Successful}");
-            
-            using (var client = await GetHttpClient(app.ApplicationUrl))
+
+            using var client = await GetHttpClient(app.ApplicationUrl);
+
+            // create post data
+            var content = new StringContent(JsonConvert.SerializeObject(new {result}), Encoding.UTF8,
+                "application/json");
+
+            try
             {
-                // create post data
-                var content = new StringContent(JsonConvert.SerializeObject(new
+                var response = await client.PostAsync(finalizeUrl, content);
+
+                if (!response.IsSuccessStatusCode)
                 {
-                    result = result
-                }),
-                Encoding.UTF8, "application/json");
+                    var responseText = await response.Content.ReadAsStringAsync();
 
-                try
-                {
-                    var response = await client.PostAsync(finalizeUrl, content);
-
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        var responseText = await response.Content.ReadAsStringAsync();
-
-                        SnLog.WriteWarning($"Error during finalize REST API call. Url: {finalizeUrl}, Status code: {response.StatusCode}. Response: {responseText}",
-                            EventId.TaskManagement.General);
-                    }
+                    SnLog.WriteWarning($"Error during finalize REST API call. Url: {finalizeUrl}, Status code: {response.StatusCode}. Response: {responseText}",
+                        EventId.TaskManagement.General);
                 }
-                catch (Exception ex)
-                {
-                    SnLog.WriteException(ex, "Error during finalize REST API call.", EventId.TaskManagement.General);
-                }
+            }
+            catch (Exception ex)
+            {
+                SnLog.WriteException(ex, "Error during finalize REST API call.", EventId.TaskManagement.General);
             }
         }
 
@@ -144,24 +141,23 @@ namespace SenseNet.TaskManagement.Web
             }
 
             //UNDONE: make this method async
-            using (var client = GetHttpClient(app.ApplicationUrl).GetAwaiter().GetResult())
+            using var client = GetHttpClient(app.ApplicationUrl).GetAwaiter().GetResult();
+
+            try
             {
-                try
-                {
-                    // Send a simple ping request to the application and 
-                    // make sure it returns a 200 OK.
-                    var response = client.GetAsync(app.ApplicationUrl).Result;
-                    response.EnsureSuccessStatusCode();
+                // Send a simple ping request to the application and 
+                // make sure it returns a 200 OK.
+                var response = client.GetAsync(app.ApplicationUrl).Result;
+                response.EnsureSuccessStatusCode();
 
-                    SnTrace.TaskManagement.Write("AgentHub SendPingRequest completed successfully for appid {0}.", appId);
+                SnTrace.TaskManagement.Write("AgentHub SendPingRequest completed successfully for appid {0}.", appId);
 
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    SnTrace.TaskManagement.Write("AgentHub SendPingRequest FAILED for appid {0}.", appId);
-                    return false;
-                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                SnTrace.TaskManagement.Write($"AgentHub SendPingRequest FAILED for appid {appId}. {ex.Message}");
+                return false;
             }
         }
 
