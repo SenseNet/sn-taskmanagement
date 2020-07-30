@@ -1,20 +1,20 @@
 ﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.IO;
 using System.Data.SqlClient;
 using System.Data;
-using System.Diagnostics;
-using System.Text;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Web;
 
+// ReSharper disable InconsistentNaming
+// ReSharper disable IdentifierTypo
+// ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Data
 {
-    public static class TaskDataHandler
+    public class TaskDataHandler
     {
         #region SQL SCRIPTS
 
@@ -138,83 +138,90 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         #endregion
 
+        private readonly TaskManagementConfiguration _config;
+        private readonly string _connectionString;
+
+        public TaskDataHandler(IOptions<TaskManagementConfiguration> config, IConfiguration mainConfiguration)
+        {
+            _config = config.Value;
+            _connectionString = mainConfiguration.GetConnectionString("TaskDatabase");
+        }
+
         //================================================================================= Manage tasks
 
-        //TODO: add data handler instance API to avoid static configuration
-
-        public static SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
+        public SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetUnfinishedTasks: appId: " + (appId ?? "") + ", tag: " + (tag ?? ""));
 
             try
             {
-                using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
-                using (var cm = cn.CreateCommand())
-                {
-                    cm.CommandType = CommandType.Text;
+                using var cn = new SqlConnection(_connectionString);
+                using var cm = cn.CreateCommand();
+                cm.CommandType = CommandType.Text;
 
-                    cm.CommandText = (appId == null)
-                        ? (tag == null ? GETRUNNINGTASKS : GETRUNNINGTASKS_BYTAG)
-                        : (tag == null ? GETRUNNINGTASKS_BYAPPID : GETRUNNINGTASKS_BYAPPIDANDTAG);
+#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
+                cm.CommandText = (appId == null)
+                    ? (tag == null ? GETRUNNINGTASKS : GETRUNNINGTASKS_BYTAG)
+                    : (tag == null ? GETRUNNINGTASKS_BYAPPID : GETRUNNINGTASKS_BYAPPIDANDTAG);
+#pragma warning restore CA2100 // Review SQL queries for security vulnerabilities
 
-                    cm.Parameters.Add("@TimeLimit", SqlDbType.DateTime).Value = DateTime.UtcNow.AddDays(-1);
-                    if (appId != null)
-                        cm.Parameters.Add("@AppId", SqlDbType.NVarChar, 50).Value = appId;
-                    if (tag != null)
-                        cm.Parameters.Add("@Tag", SqlDbType.NVarChar, 450).Value = tag;
+                cm.Parameters.Add("@TimeLimit", SqlDbType.DateTime).Value = DateTime.UtcNow.AddDays(-1);
+                if (appId != null)
+                    cm.Parameters.Add("@AppId", SqlDbType.NVarChar, 50).Value = appId;
+                if (tag != null)
+                    cm.Parameters.Add("@Tag", SqlDbType.NVarChar, 450).Value = tag;
 
-                    cn.Open();
-                    var reader = cm.ExecuteReader();
-                    var result = new List<SnTaskEvent>();
+                cn.Open();
+                var reader = cm.ExecuteReader();
+                var result = new List<SnTaskEvent>();
 
-                    while (reader.Read())
-                        result.Add(GetTaskEventFromReader(reader));
+                while (reader.Read())
+                    result.Add(GetTaskEventFromReader(reader));
 
-                    return result.ToArray();
-                }
+                return result.ToArray();
             }
             catch (Exception ex)
             {
                 throw new TaskManagementException("Error during getting unfinished tasks.", ex);
             }
         }
-        public static SnTaskEvent[] GetDetailedTaskEvents(string appId, string tag, int taskId)
+        public SnTaskEvent[] GetDetailedTaskEvents(string appId, string tag, int taskId)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetDetailedTaskEvents: appId: " + (appId ?? "") + ", tag: " + (tag ?? "") + ", taskId: " + taskId);
 
             try
             {
-                using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
-                using (var cm = cn.CreateCommand())
-                {
-                    cm.CommandType = CommandType.Text;
+                using var cn = new SqlConnection(_connectionString);
+                using var cm = cn.CreateCommand();
+                cm.CommandType = CommandType.Text;
 
-                    cm.CommandText = (appId == null)
-                        ? (tag == null ? GETEVENTSBYTASKID : GETEVENTSBYTASKID_ANDTAG)
-                        : (tag == null ? GETEVENTSBYTASKID_ANDAPPID : GETEVENTSBYTASKID_ANDAPPIDANDTAG);
+#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
+                cm.CommandText = (appId == null)
+                    ? (tag == null ? GETEVENTSBYTASKID : GETEVENTSBYTASKID_ANDTAG)
+                    : (tag == null ? GETEVENTSBYTASKID_ANDAPPID : GETEVENTSBYTASKID_ANDAPPIDANDTAG);
+#pragma warning restore CA2100 // Review SQL queries for security vulnerabilities
 
-                    cm.Parameters.Add("@TaskId", SqlDbType.Int).Value = taskId;
-                    if (appId != null)
-                        cm.Parameters.Add("@AppId", SqlDbType.NVarChar, 50).Value = appId;
-                    if (tag != null)
-                        cm.Parameters.Add("@Tag", SqlDbType.NVarChar, 450).Value = tag;
+                cm.Parameters.Add("@TaskId", SqlDbType.Int).Value = taskId;
+                if (appId != null)
+                    cm.Parameters.Add("@AppId", SqlDbType.NVarChar, 50).Value = appId;
+                if (tag != null)
+                    cm.Parameters.Add("@Tag", SqlDbType.NVarChar, 450).Value = tag;
 
-                    cn.Open();
-                    var reader = cm.ExecuteReader();
-                    var result = new List<SnTaskEvent>();
+                cn.Open();
+                var reader = cm.ExecuteReader();
+                var result = new List<SnTaskEvent>();
 
-                    while (reader.Read())
-                        result.Add(GetTaskEventFromReader(reader));
+                while (reader.Read())
+                    result.Add(GetTaskEventFromReader(reader));
 
-                    return result.ToArray();
-                }
+                return result.ToArray();
             }
             catch (Exception ex)
             {
                 throw new TaskManagementException("Error during getting task events.", ex);
             }
         }
-        private static SnTaskEvent GetTaskEventFromReader(SqlDataReader reader)
+        private SnTaskEvent GetTaskEventFromReader(SqlDataReader reader)
         {
             return new SnTaskEvent
             {
@@ -236,9 +243,9 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             };
         }
 
-        public static RegisterTaskResult RegisterTask(string type, string title, TaskPriority priority, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
+        public RegisterTaskResult RegisterTask(string type, string title, TaskPriority priority, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
         {
-            double order = double.NaN;
+            double order;
             switch (priority)
             {
                 case TaskPriority.System: order = 0.0; break;
@@ -279,230 +286,225 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             return result;
         }
-        private static RegisterTaskResult RegisterTask(string type, string title, double order, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
+        private RegisterTaskResult RegisterTask(string type, string title, double order, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
         {
-            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
+            using var cn = new SqlConnection(_connectionString);
+            cn.Open();
+            var tran = cn.BeginTransaction();
+            var cm1 = cn.CreateCommand();
+            SqlCommand cm2 = null;
+            cm1.CommandText = REGISTERTASKSQL;
+            cm1.Connection = cn;
+            cm1.Transaction = tran;
+            cm1.CommandType = CommandType.Text;
+
+            try
             {
-                cn.Open();
-                var tran = cn.BeginTransaction();
-                var cm1 = cn.CreateCommand();
-                SqlCommand cm2 = null;
-                cm1.CommandText = REGISTERTASKSQL;
-                cm1.Connection = cn;
-                cm1.Transaction = tran;
-                cm1.CommandType = CommandType.Text;
+                cm1.Parameters.Add("@Type", SqlDbType.NVarChar).Value = type;
+                cm1.Parameters.Add("@Title", SqlDbType.NVarChar).Value = title;
+                cm1.Parameters.Add("@Order", SqlDbType.Float).Value = order;
+                cm1.Parameters.Add("@Tag", SqlDbType.NVarChar).Value = (object)tag ?? DBNull.Value;
+                cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = (object)appId ?? DBNull.Value;
+                cm1.Parameters.Add("@FinalizeUrl", SqlDbType.NVarChar).Value = (object)finalizeUrl ?? DBNull.Value;
+                cm1.Parameters.Add("@Hash", SqlDbType.BigInt).Value = hash;
+                cm1.Parameters.Add("@TaskData", SqlDbType.NVarChar).Value = taskDataSerialized;
 
-                try
+                var result = new RegisterTaskResult();
+                int id;
+                using (var reader = cm1.ExecuteReader())
                 {
-                    cm1.Parameters.Add("@Type", SqlDbType.NVarChar).Value = type;
-                    cm1.Parameters.Add("@Title", SqlDbType.NVarChar).Value = title;
-                    cm1.Parameters.Add("@Order", SqlDbType.Float).Value = order;
-                    cm1.Parameters.Add("@Tag", SqlDbType.NVarChar).Value = (object)tag ?? DBNull.Value;
-                    cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = (object)appId ?? DBNull.Value;
-                    cm1.Parameters.Add("@FinalizeUrl", SqlDbType.NVarChar).Value = (object)finalizeUrl ?? DBNull.Value;
-                    cm1.Parameters.Add("@Hash", SqlDbType.BigInt).Value = hash;
-                    cm1.Parameters.Add("@TaskData", SqlDbType.NVarChar).Value = taskDataSerialized;
+                    // there must be only one row
+                    reader.Read();
+                    var o = reader[0];
 
-                    var result = new RegisterTaskResult();
-                    var id = 0;
-                    using (var reader = cm1.ExecuteReader())
-                    {
-                        // there must be only one row
-                        reader.Read();
-                        var o = reader[0];
+                    // task registration was not successful
+                    if (o == DBNull.Value)
+                        return null;
 
-                        // task registration was not successful
-                        if (o == DBNull.Value)
-                            return null;
-
-                        id = Convert.ToInt32(o);
-                        result.NewlyCreated = reader.GetBoolean(1);
-                        result.Updated = reader.GetBoolean(2);
-                    }
-
-                    result.Task = new SnTask
-                    {
-                        Id = id,
-                        Title = title,
-                        Order = order,
-                        Tag = tag,
-                        TaskData = taskDataSerialized,
-                        RegisteredAt = DateTime.UtcNow,
-                        Hash = hash,
-                        Type = type,
-                        AppId = appId,
-                        FinalizeUrl = finalizeUrl
-                    };
-
-                    if (result.NewlyCreated || result.Updated)
-                    {
-                        cm2 = cn.CreateCommand();
-                        cm2.Transaction = tran;
-                        WriteRegisterTaskEvent(result, machineName, cm2);
-                    }
-
-                    tran.Commit();
-                    return result;
+                    id = Convert.ToInt32(o);
+                    result.NewlyCreated = reader.GetBoolean(1);
+                    result.Updated = reader.GetBoolean(2);
                 }
-                catch
+
+                result.Task = new SnTask
                 {
-                    tran.Rollback();
-                    throw;
-                }
-                finally
+                    Id = id,
+                    Title = title,
+                    Order = order,
+                    Tag = tag,
+                    TaskData = taskDataSerialized,
+                    RegisteredAt = DateTime.UtcNow,
+                    Hash = hash,
+                    Type = type,
+                    AppId = appId,
+                    FinalizeUrl = finalizeUrl
+                };
+
+                if (result.NewlyCreated || result.Updated)
                 {
-                    cm1.Dispose();
-                    if (cm2 != null)
-                        cm2.Dispose();
+                    cm2 = cn.CreateCommand();
+                    cm2.Transaction = tran;
+                    WriteRegisterTaskEvent(result, machineName, cm2);
                 }
+
+                tran.Commit();
+                return result;
+            }
+            catch
+            {
+                tran.Rollback();
+                throw;
+            }
+            finally
+            {
+                cm1.Dispose();
+                if (cm2 != null)
+                    cm2.Dispose();
             }
         }
 
-        public static void FinalizeTask(SnTaskResult taskResult)
+        public void FinalizeTask(SnTaskResult taskResult)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler FinalizeTask: " + (taskResult.Successful ? "Done" : "Error") + ", Id: " + taskResult.Task.Id);
 
-            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
-            using (var cm = new SqlCommand(DELETETASKSQL, cn) { CommandType = System.Data.CommandType.Text })
+            using (var cn = new SqlConnection(_connectionString))
             {
+                using var cm = new SqlCommand(DELETETASKSQL, cn) { CommandType = CommandType.Text };
                 cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskResult.Task.Id;
                 cn.Open();
                 cm.ExecuteNonQuery();
             }
+
             WriteFinishExecutionEvent(taskResult);
         }
 
-        public static void RefreshLock(int taskId)
+        public void RefreshLock(int taskId)
         {
-            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
-            using (var cm = new SqlCommand(REFRESHLOCKSQL, cn) { CommandType = System.Data.CommandType.Text })
-            {
-                cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskId;
+            using var cn = new SqlConnection(_connectionString);
+            using var cm = new SqlCommand(REFRESHLOCKSQL, cn) { CommandType = CommandType.Text };
+            cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskId;
 
-                cn.Open();
-                cm.ExecuteNonQuery();
-            }
+            cn.Open();
+            cm.ExecuteNonQuery();
         }
-        public static SnTask GetNextAndLock(string machineName, string agentName, string[] capabilities)
+        public SnTask GetNextAndLock(string machineName, string agentName, string[] capabilities)
         {
             var sql = String.Format(GETANDLOCKSQL, String.Join("', '", capabilities));
-            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
-            using (var cm = new SqlCommand(sql, cn) { CommandType = System.Data.CommandType.Text })
-            {
-                cm.Parameters.Add("@LockedBy", SqlDbType.NVarChar, 450).Value = agentName;
-                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Web.Configuration.TaskExecutionTimeoutInSeconds);
+            using var cn = new SqlConnection(_connectionString);
+#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
+            using var cm = new SqlCommand(sql, cn) { CommandType = CommandType.Text };
+#pragma warning restore CA2100 // Review SQL queries for security vulnerabilities
+            cm.Parameters.Add("@LockedBy", SqlDbType.NVarChar, 450).Value = agentName;
+            cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", _config.TaskExecutionTimeoutInSeconds);
 
-                cn.Open();
-                var reader = cm.ExecuteReader();
-                while (reader.Read())
+            cn.Open();
+            var reader = cm.ExecuteReader();
+            while (reader.Read())
+            {
+                var task = new SnTask
                 {
-                    var task = new SnTask
-                    {
-                        Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                        Type = reader.GetString(reader.GetOrdinal("Type")),
-                        Title = reader.GetString(reader.GetOrdinal("Title")),
-                        Order = reader.GetDouble(reader.GetOrdinal("Order")),
-                        Tag = GetSafeString(reader, reader.GetOrdinal("Tag")),
-                        RegisteredAt = reader.GetDateTime(reader.GetOrdinal("RegisteredAt")),
-                        AppId = GetSafeString(reader, reader.GetOrdinal("AppId")),
-                        FinalizeUrl = GetSafeString(reader, reader.GetOrdinal("FinalizeUrl")),
-                        LastLockUpdate = GetSafeDateTime(reader, reader.GetOrdinal("LastLockUpdate")),
-                        LockedBy = GetSafeString(reader, reader.GetOrdinal("LockedBy")),
-                        Hash = reader.GetInt64(reader.GetOrdinal("Hash")),
-                        TaskData = GetSafeString(reader, reader.GetOrdinal("TaskData")),
-                    };
-                    WriteStartExecutionEvent(task, machineName, agentName);
-                    return task;
-                }
-                return null;
+                    Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                    Type = reader.GetString(reader.GetOrdinal("Type")),
+                    Title = reader.GetString(reader.GetOrdinal("Title")),
+                    Order = reader.GetDouble(reader.GetOrdinal("Order")),
+                    Tag = GetSafeString(reader, reader.GetOrdinal("Tag")),
+                    RegisteredAt = reader.GetDateTime(reader.GetOrdinal("RegisteredAt")),
+                    AppId = GetSafeString(reader, reader.GetOrdinal("AppId")),
+                    FinalizeUrl = GetSafeString(reader, reader.GetOrdinal("FinalizeUrl")),
+                    LastLockUpdate = GetSafeDateTime(reader, reader.GetOrdinal("LastLockUpdate")),
+                    LockedBy = GetSafeString(reader, reader.GetOrdinal("LockedBy")),
+                    Hash = reader.GetInt64(reader.GetOrdinal("Hash")),
+                    TaskData = GetSafeString(reader, reader.GetOrdinal("TaskData")),
+                };
+                WriteStartExecutionEvent(task, machineName, agentName);
+                return task;
             }
+            return null;
         }
-        public static int GetDeadTaskCount()
+        public int GetDeadTaskCount()
         {
-            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
-            using (var cm = new SqlCommand(GETDEADTASKSSQL, cn) { CommandType = System.Data.CommandType.Text })
-            {
-                cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", Web.Configuration.TaskExecutionTimeoutInSeconds);
-                cn.Open();
-                var result = (int)cm.ExecuteScalar();
-                SnTrace.TaskManagement.Write("TaskDataHandler GetDeadTasks. Count: " + result);
-                return result;
-            }
+            using var cn = new SqlConnection(_connectionString);
+#pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
+            using var cm = new SqlCommand(GETDEADTASKSSQL, cn) { CommandType = CommandType.Text };
+#pragma warning restore CA2100 // Review SQL queries for security vulnerabilities
+            cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", _config.TaskExecutionTimeoutInSeconds);
+            cn.Open();
+            var result = (int)cm.ExecuteScalar();
+            SnTrace.TaskManagement.Write("TaskDataHandler GetDeadTasks. Count: " + result);
+            return result;
         }
 
-        public static void StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public void StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
         {
             WriteStartSubtaskEvent(subtask, task, machineName, agentName);
         }
-        public static void FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public void FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
         {
             WriteFinishSubtaskEvent(subtask, task, machineName, agentName);
         }
 
         //================================================================================= Manage applications
 
-        public static Application RegisterApplication(RegisterApplicationRequest request)
+        public Application RegisterApplication(RegisterApplicationRequest request)
         {
-            using (var cn = new SqlConnection(Web.Configuration.ConnectionString))
+            using var cn = new SqlConnection(_connectionString);
+            SqlCommand cm1 = null;
+
+            try
             {
-                SqlCommand cm1 = null;
+                cn.Open();
 
-                try
+                cm1 = cn.CreateCommand();
+                cm1.CommandText = REGISTERAPPLICATIONSQL;
+                cm1.Connection = cn;
+                cm1.CommandType = CommandType.Text;
+
+                var appData = JsonConvert.SerializeObject(new
                 {
-                    cn.Open();
+                    request.ApplicationUrl,
+                    request.TaskFinalizeUrl,
+                    request.AuthenticationUrl,
+                    request.AuthorizationUrl
+                });
 
-                    cm1 = cn.CreateCommand();
-                    cm1.CommandText = REGISTERAPPLICATIONSQL;
-                    cm1.Connection = cn;
-                    cm1.CommandType = CommandType.Text;
-
-                    var appData = JsonConvert.SerializeObject(new
-                    {
-                        ApplicationUrl = request.ApplicationUrl,
-                        TaskFinalizeUrl = request.TaskFinalizeUrl,
-                        AuthenticationUrl = request.AuthenticationUrl,
-                        AuthorizationUrl = request.AuthorizationUrl
-                    });
-
-                    var resultApp = new Application
-                    {
-                        AppId = request.AppId,
-                        ApplicationUrl = request.ApplicationUrl,
-                        AuthenticationUrl = request.AuthenticationUrl,
-                        AuthorizationUrl = request.AuthorizationUrl
-                    };
-
-                    cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = request.AppId;
-                    cm1.Parameters.Add("@AppData", SqlDbType.NVarChar).Value = appData;
-
-                    using (var reader = cm1.ExecuteReader())
-                    {
-                        // there must be only one row
-                        reader.Read();
-
-                        resultApp.RegistrationDate = reader.GetDateTime(reader.GetOrdinal("RegistrationDate"));
-                        resultApp.LastUpdateDate = reader.GetDateTime(reader.GetOrdinal("LastUpdateDate"));
-                    }
-
-                    return resultApp;
-                }
-                catch (Exception ex)
+                var resultApp = new Application
                 {
-                    SnLog.WriteException(ex, "Error during app registration.", EventId.TaskManagement.General);
+                    AppId = request.AppId,
+                    ApplicationUrl = request.ApplicationUrl,
+                    AuthenticationUrl = request.AuthenticationUrl,
+                    AuthorizationUrl = request.AuthorizationUrl
+                };
 
-                    throw new TaskManagementException("Error during application registration.", request.AppId, ex);
-                }
-                finally
+                cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = request.AppId;
+                cm1.Parameters.Add("@AppData", SqlDbType.NVarChar).Value = appData;
+
+                using (var reader = cm1.ExecuteReader())
                 {
-                    if (cm1 != null)
-                        cm1.Dispose();
+                    // there must be only one row
+                    reader.Read();
+
+                    resultApp.RegistrationDate = reader.GetDateTime(reader.GetOrdinal("RegistrationDate"));
+                    resultApp.LastUpdateDate = reader.GetDateTime(reader.GetOrdinal("LastUpdateDate"));
                 }
+
+                return resultApp;
+            }
+            catch (Exception ex)
+            {
+                SnLog.WriteException(ex, "Error during app registration.", EventId.TaskManagement.General);
+
+                throw new TaskManagementException("Error during application registration.", request.AppId, ex);
+            }
+            finally
+            {
+                if (cm1 != null)
+                    cm1.Dispose();
             }
         }
 
-        public static Application[] Getapplications()
+        public Application[] GetApplications()
         {
-            using var cn = new SqlConnection(Web.Configuration.ConnectionString);
+            using var cn = new SqlConnection(_connectionString);
             using var cm = cn.CreateCommand();
 
             cm.CommandType = CommandType.Text;
@@ -519,7 +521,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             return result.ToArray();
         }
 
-        private static Application GetApplicationFromReader(SqlDataReader reader)
+        private Application GetApplicationFromReader(SqlDataReader reader)
         {
             var app = new Application
             {
@@ -545,7 +547,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         //================================================================================= Write events
 
-        private static void WriteRegisterTaskEvent(RegisterTaskResult result, string machineName, SqlCommand command)
+        private void WriteRegisterTaskEvent(RegisterTaskResult result, string machineName, SqlCommand command)
         {
             var task = result.Task;
             WriteEvent(command, result.NewlyCreated ? TaskEventType.Registered : TaskEventType.Updated, task.Id,
@@ -553,14 +555,13 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 task.AppId, machineName, null,
                 task.Tag, task.Type, task.Order, task.Hash, task.TaskData);
         }
-        private static void WriteStartExecutionEvent(SnTask task, string machineName, string agentName)
+        private void WriteStartExecutionEvent(SnTask task, string machineName, string agentName)
         {
-            var message = "Agent " + task.LockedBy + " started a task execution.";
             WriteEvent(null, TaskEventType.Started, task.Id, null, task.Title, null, task.AppId,
                  machineName, agentName, task.Tag,
                  null, null, null, null);
         }
-        private static void WriteFinishExecutionEvent(SnTaskResult taskResult)
+        private void WriteFinishExecutionEvent(SnTaskResult taskResult)
         {
             var task = taskResult.Task;
             WriteEvent(null,
@@ -568,32 +569,32 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 task.Id,
                 null,
                 task.Title,
-                taskResult.Error == null ? (string)null : taskResult.Error.ToString(),
+                taskResult.Error?.ToString(),
                 task.AppId,
                 taskResult.MachineName,
                 taskResult.AgentName,
                 task.Tag,
                 null, null, null, null);
         }
-        private static void WriteStartSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
+        private void WriteStartSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
         {
             WriteEvent(null, TaskEventType.SubtaskStarted, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
                 , null, null, null, null);
         }
-        private static void WriteFinishSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
+        private void WriteFinishSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
         {
             WriteEvent(null, TaskEventType.SubtaskFinished, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
                 , null, null, null, null);
         }
 
-        private static void WriteEvent(SqlCommand cm, string eventType, int taskId, Guid? subtaskId, string title, string details,
+        private void WriteEvent(SqlCommand cm, string eventType, int taskId, Guid? subtaskId, string title, string details,
             string appId, string machine, string agent, string tag,
             string taskType, double? taskOrder, long? taskHash, string taskData)
         {
             SqlConnection cn = null;
             if (cm == null)
             {
-                cn = new SqlConnection(Web.Configuration.ConnectionString);
+                cn = new SqlConnection(_connectionString);
                 cm = cn.CreateCommand();
                 cm.Connection = cn;
                 cn.Open();
@@ -632,28 +633,10 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                     cn.Dispose();
                 }
             }
-
         }
 
         //================================================================================= Helper methods
-
-        internal static string Serialize(object data)
-        {
-            if (data != null)
-                return null;
-
-            var serializer = new JsonSerializer();
-            serializer.Converters.Add(new JavaScriptDateTimeConverter());
-            serializer.NullValueHandling = NullValueHandling.Ignore;
-
-            using (var sw = new StringWriter())
-            {
-                using (JsonWriter writer = new JsonTextWriter(sw))
-                    serializer.Serialize(writer, data);
-                return sw.GetStringBuilder().ToString();
-            }
-        }
-
+        
         private static string GetSafeString(SqlDataReader reader, int index)
         {
             if (reader.IsDBNull(index))
@@ -690,6 +673,5 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 return null;
             return reader.GetGuid(index);
         }
-
     }
 }

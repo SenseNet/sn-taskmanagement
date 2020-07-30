@@ -30,11 +30,13 @@ namespace SenseNet.TaskManagement.Hubs
     {
         private readonly IHubContext<TaskMonitorHub> _monitorHub;
         private readonly ApplicationHandler _applicationHandler;
+        private readonly TaskDataHandler _dataHandler;
 
-        public AgentHub(IHubContext<TaskMonitorHub> monitorHub, ApplicationHandler appHandler)
+        public AgentHub(IHubContext<TaskMonitorHub> monitorHub, ApplicationHandler appHandler, TaskDataHandler dataHandler)
         {
             _monitorHub = monitorHub;
             _applicationHandler = appHandler;
+            _dataHandler = dataHandler;
         }
 
         //===================================================================== Properties
@@ -52,7 +54,7 @@ namespace SenseNet.TaskManagement.Hubs
 
             try
             {
-                var task = TaskDataHandler.GetNextAndLock(machineName, agentName, capabilities);
+                var task = _dataHandler.GetNextAndLock(machineName, agentName, capabilities);
                 SnTrace.TaskManagement.Write("AgentHub TaskDataHandler.GetNextAndLock returned: " + (task == null ? "null" : "task " + task.Id));
 
                 // task details are not passed to the monitor yet
@@ -73,7 +75,7 @@ namespace SenseNet.TaskManagement.Hubs
         public void RefreshLock(string machineName, string agentName, int taskId)
         {
             SnTrace.TaskManagement.Write("AgentHub RefreshLock. Agent: {0}, task: {1}.", agentName, taskId);
-            TaskDataHandler.RefreshLock(taskId);
+            _dataHandler.RefreshLock(taskId);
         }
 
         public void Heartbeat(string machineName, string agentName, SnHealthRecord healthRecord)
@@ -123,7 +125,7 @@ namespace SenseNet.TaskManagement.Hubs
                 }
 
                 // remove the task from the database first
-                TaskDataHandler.FinalizeTask(taskResult);
+                _dataHandler.FinalizeTask(taskResult);
 
                 SnTrace.TaskManagement.Write("AgentHub TaskFinished: task {0} has been deleted.", taskResult.Task.Id);
 
@@ -159,7 +161,7 @@ namespace SenseNet.TaskManagement.Hubs
                 task.Id, agentName, subtask.Title);
             try
             { 
-                TaskDataHandler.StartSubtask(machineName, agentName, subtask, task);
+                _dataHandler.StartSubtask(machineName, agentName, subtask, task);
 
                 _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskStartedEvent(task.Id, subtask.Title, subtask.Details, 
                     task.AppId, task.Tag, machineName, agentName, subtask.Id)).GetAwaiter().GetResult();
@@ -174,8 +176,8 @@ namespace SenseNet.TaskManagement.Hubs
         {
             SnTrace.TaskManagement.Write("AgentHub FinishSubtask. Task id:{0}, agent:{1}, title:{2}", task.Id, agentName, subtask.Title);
             try
-            {                
-                TaskDataHandler.FinishSubtask(machineName, agentName, subtask, task);
+            {
+                _dataHandler.FinishSubtask(machineName, agentName, subtask, task);
                 
                 _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskFinishedEvent(task.Id, subtask.Title, subtask.Details, 
                     task.AppId, task.Tag, machineName, agentName, subtask.Id)).GetAwaiter().GetResult();
@@ -206,14 +208,7 @@ namespace SenseNet.TaskManagement.Hubs
         {
             ClientCount++;
             SnTrace.TaskManagement.Write("AgentHub OnConnected. Client count: " + ClientCount);
-
-            var agentHub = Context.GetHttpContext()?.RequestServices.GetService(typeof(IHubContext<AgentHub>)) as
-                IHubContext<AgentHub>;
-
-            // This is here to have access to the agent hub service. Timer initialization
-            // should happen only once.
-            InitializeDeadTaskTimer(agentHub);
-
+            
             return base.OnConnectedAsync();
         }
         public override Task OnDisconnectedAsync(Exception ex)
@@ -223,34 +218,6 @@ namespace SenseNet.TaskManagement.Hubs
                 ex?.Message, ClientCount);
 
             return base.OnDisconnectedAsync(ex);
-        }
-
-        private static readonly int HandleDeadTaskPeriodInMilliseconds = 60 * 1000;
-        private static Timer _deadTaskTimer;
-
-        private static void InitializeDeadTaskTimer(IHubContext<AgentHub> agentHub)
-        {
-            if (agentHub == null)
-                return;
-
-            // initialize the timer only once
-            if (_deadTaskTimer != null)
-                return;
-
-            SnTrace.TaskManagement.Write("Initializing dead task timer.");
-
-            _deadTaskTimer = new Timer(state =>
-                {
-                    var ah = (IHubContext<AgentHub>)state;
-                    var dtc = TaskDataHandler.GetDeadTaskCount();
-                    
-                    // if there is a dead task in the db, notify agents
-                    if (dtc > 0)
-                        ah.BroadcastNewTask(null).GetAwaiter().GetResult();
-                }, 
-                agentHub,
-                HandleDeadTaskPeriodInMilliseconds,
-                HandleDeadTaskPeriodInMilliseconds);
         }
     }
 }

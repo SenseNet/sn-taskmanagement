@@ -28,7 +28,7 @@ namespace SenseNet.TaskManagement.Web
                     {
                         if (_applications == null)
                         {
-                            _applications = TaskDataHandler.Getapplications().ToList();
+                            _applications = _dataHandler.GetApplications().ToList();
 
                             SnLog.WriteInformation($"Applications reloaded. {Environment.NewLine}{(_applications.Count == 0 ? "No apps found." : string.Join(Environment.NewLine, _applications.Select(a => $"{a.AppId} ({a.ApplicationUrl})")))}",
                                 EventId.TaskManagement.Lifecycle);
@@ -41,9 +41,12 @@ namespace SenseNet.TaskManagement.Web
         }
 
         private readonly TokenStore _tokenStore;
-        public ApplicationHandler(TokenStore tokenStore)
+        private readonly TaskDataHandler _dataHandler;
+
+        public ApplicationHandler(TokenStore tokenStore, TaskDataHandler dataHandler)
         {
             _tokenStore = tokenStore;
+            _dataHandler = dataHandler;
         }
 
         /// <summary>

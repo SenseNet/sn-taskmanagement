@@ -72,6 +72,13 @@ namespace SenseNet.TaskManagement.Hubs
 
     public class TaskMonitorHub : Hub
     {
+        private readonly TaskDataHandler _dataHandler;
+
+        public TaskMonitorHub(TaskDataHandler dataHandler)
+        {
+            _dataHandler = dataHandler;
+        }
+
         //===================================================================== Hub API
 
         /// <summary>
@@ -83,7 +90,7 @@ namespace SenseNet.TaskManagement.Hubs
         /// <returns></returns>
         public SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
         {
-            return TaskDataHandler.GetUnfinishedTasks(appId, tag);
+            return _dataHandler.GetUnfinishedTasks(appId, tag);
         }
 
         /// <summary>
@@ -95,7 +102,7 @@ namespace SenseNet.TaskManagement.Hubs
         /// <returns></returns>
         public SnTaskEvent[] GetDetailedTaskEvents(string appId, string tag, int taskId)
         {
-            return TaskDataHandler.GetDetailedTaskEvents(appId, tag, taskId);
+            return _dataHandler.GetDetailedTaskEvents(appId, tag, taskId);
         }
 
         //===================================================================== Overrides

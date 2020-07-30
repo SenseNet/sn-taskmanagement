@@ -12,7 +12,6 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
-using SenseNet.TaskManagement.Core.Configuration;
 using SenseNetTaskAgent;
 
 namespace SenseNet.TaskManagement.TaskAgent
@@ -22,7 +21,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         //UNDONE: cleanup and refactor
 
         internal static string AgentName { get; private set; } = Guid.NewGuid().ToString();
-        private static object _workingsync = new object();
+        private static readonly object WorkingSync = new object();
         private static bool _working;
         private static bool _updateStarted;
         private static bool _updateWinner;
@@ -30,7 +29,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         private static SnTask _currentTask;
         internal static Dictionary<string, string> TaskExecutors { get; private set; }
         private static string[] _capabilities;
-        private static ServerContext _serverContext = new ServerContext { ServerType = ServerType.Distributed };
+        private static readonly ServerContext ServerContext = new ServerContext { ServerType = ServerType.Distributed };
 
         private static HubConnection _hubConnection;
 
@@ -65,7 +64,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             }
         }
 
-        private  static AgentConfiguration AgentConfig { get; set; } = new AgentConfiguration();
+        private  static AgentConfiguration AgentConfig { get; } = new AgentConfiguration();
 
         static async Task Main(string[] args)
         {
@@ -129,9 +128,10 @@ namespace SenseNet.TaskManagement.TaskAgent
         private static void DiscoverCapabilities()
         {
             var executors = new Dictionary<string, string>();
-            
-            foreach(var item in Configuration.ExpliciteExecutors)
-                executors.Add(item.Key, item.Value);
+
+            //TODO: explicit executors feature has been removed temporarily
+            //foreach(var item in AgentConfig.Executors)
+            //    executors.Add(item.Key, item.Value);
 
             if (Directory.Exists(AgentConfig.TaskExecutorDirectory))
             {
@@ -223,7 +223,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                 SnLog.WriteInformation($"Agent {AgentName} is CONNECTED to {AgentConfig.TaskManagementUrl}.", 
                     EventId.TaskManagement.Communication);
 
-                var msg = $"Agent {AgentName} works in {_serverContext.ServerType.ToString().ToLower()} " +
+                var msg = $"Agent {AgentName} works in {ServerContext.ServerType.ToString().ToLower()} " +
                           "server context.";
 
                 SnTrace.TaskManagement.Write(msg);
@@ -282,7 +282,7 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         private static async Task WorkAsync()
         {
-            lock (_workingsync)
+            lock (WorkingSync)
             {
                 if (_working || _updateStarted)
                     return;
@@ -345,11 +345,15 @@ namespace SenseNet.TaskManagement.TaskAgent
             try
             {
                 if (t.Type == "DoNotRunAnyExecutor")
-                    using (var executor = new TestExecutor())
-                        result.ResultCode = executor.Execute(t);
+                {
+                    using var executor = new TestExecutor();
+                    result.ResultCode = executor.Execute(t);
+                }
                 else
-                    using (var executor = new OutProcExecutor())
-                        result.ResultCode = executor.Execute(t);
+                {
+                    using var executor = new OutProcExecutor(AgentConfig);
+                    result.ResultCode = executor.Execute(t);
+                }
             }
             catch (Exception e)
             {
@@ -725,15 +729,15 @@ namespace SenseNet.TaskManagement.TaskAgent
                     var folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
                     var targetFilePath = Path.Combine(folder, AgentManager.UPDATER_PACKAGENAME);
 
-                    // set NTLM credentials (for Windows auth) or Authorization header (for basic auth)
-                    if (string.IsNullOrEmpty(Configuration.Username))
-                        client.Credentials = CredentialCache.DefaultCredentials;
-                    else
-                        client.Headers.Add("Authorization", Configuration.GetBasicAuthHeader(new UserCredentials
-                        {
-                            UserName = Configuration.Username,
-                            Password = Configuration.Password
-                        }));
+                    //// set NTLM credentials (for Windows auth) or Authorization header (for basic auth)
+                    //if (string.IsNullOrEmpty(Configuration.Username))
+                    //    client.Credentials = CredentialCache.DefaultCredentials;
+                    //else
+                    //    client.Headers.Add("Authorization", Configuration.GetBasicAuthHeader(new UserCredentials
+                    //    {
+                    //        UserName = Configuration.Username,
+                    //        Password = Configuration.Password
+                    //    }));
 
                     // save the file to the local TaskManagement folder with the same name as the content
                     client.DownloadFile(packageUrl, targetFilePath);

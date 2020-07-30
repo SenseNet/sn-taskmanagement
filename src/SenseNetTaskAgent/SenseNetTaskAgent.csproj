@@ -19,6 +19,7 @@
     <Product>sensenet Task Agent</Product>
     <Description>sensenet TaskManagement agent tool.</Description>
     <LangVersion>latest</LangVersion>
+    <RootNamespace>SenseNet.TaskManagement.TaskAgent</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
