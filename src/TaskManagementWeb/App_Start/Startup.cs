@@ -45,10 +45,7 @@ namespace SenseNet.TaskManagement.Web
             SnTrace.EnableAll();
 
             services.Configure<TaskManagementConfiguration>(Configuration.GetSection("TaskManagement"));
-
-            //TODO: inject connection string to a TaskDataHandler instance
-            Web.Configuration.ConnectionString = Configuration.GetConnectionString("TaskDatabase");
-
+            
             //TODO: inject allowed origins dynamically (do not allow everything)
             services.AddCors(c =>
             {

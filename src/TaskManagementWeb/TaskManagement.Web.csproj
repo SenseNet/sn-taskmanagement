@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <LangVersion>latest</LangVersion>
+    <RootNamespace>SenseNet.TaskManagement.Web</RootNamespace>
+    <AssemblyName>SenseNet.TaskManagement.Web</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

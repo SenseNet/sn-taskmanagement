@@ -1,12 +1,15 @@
-﻿using System;
-using System.Configuration;
-using SenseNet.TaskManagement.Core.Configuration;
+﻿using System.Configuration;
 
+// ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Web
 {
     public class TaskManagementConfiguration
     {
         //TODO: put all config values here
+
+        /// <summary>
+        /// After this timeout the task lock will expire so any agent can claim the task.
+        /// </summary>
         public int TaskExecutionTimeoutInSeconds { get; set; }
     }
 
@@ -16,9 +19,6 @@ namespace SenseNet.TaskManagement.Web
         //private static readonly string TaskDatabaseConnectrionStringKey = "TaskDatabase";
         //private static readonly string SignalRDatabaseConnectrionStringKey = "SignalRDatabase";
         private static readonly string SignalRSqlEnabledKey = "SignalRSqlEnabled";
-        private static readonly string TaskExecutionTimeoutInSecondsKey = "TaskExecutionTimeoutInSeconds";
-
-        internal static string ConnectionString { get; set; }
 
         private static bool? _signalRSqlEnabled;
         internal static bool SignalRSqlEnabled
@@ -34,25 +34,6 @@ namespace SenseNet.TaskManagement.Web
                     _signalRSqlEnabled = value;
                 }
                 return _signalRSqlEnabled.Value;
-            }
-        }
-        
-        private static int? _taskExecutionTimeoutInSeconds;
-        private static int _defaultTaskExecutionTimeoutInSeconds = 30;
-        /// <summary>After the the timeout the task lock will expire so any agent can claim the task.</summary>
-        internal static int TaskExecutionTimeoutInSeconds
-        {
-            get
-            {
-                if (_taskExecutionTimeoutInSeconds == null)
-                {
-                    int value;
-                    var setting = ConfigurationManager.AppSettings[TaskExecutionTimeoutInSecondsKey];
-                    if (String.IsNullOrEmpty(setting) || !Int32.TryParse(setting, out value))
-                        value = _defaultTaskExecutionTimeoutInSeconds;
-                    _taskExecutionTimeoutInSeconds = value;
-                }
-                return _taskExecutionTimeoutInSeconds.Value;
             }
         }
     }
