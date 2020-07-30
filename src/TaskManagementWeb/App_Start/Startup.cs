@@ -1,25 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-//using System.Net.Http.Formatting;
-using Microsoft.AspNetCore.SignalR;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using System.Threading;
-using SenseNet.TaskManagement.Data;
+﻿using SenseNet.TaskManagement.Data;
 using SenseNet.TaskManagement.Hubs;
-using SenseNet.TaskManagement.Web;
-using SenseNet.TaskManagement.Core;
-//using System.Web.Configuration;
-using System.Configuration;
 using Microsoft.AspNetCore.Builder;
-//using System.Web.Http.ExceptionHandling;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using SenseNet.Diagnostics;
 using SenseNet.Extensions.DependencyInjection;
 using EventId = SenseNet.Diagnostics.EventId;
@@ -107,10 +92,6 @@ namespace SenseNet.TaskManagement.Web
             //UNDONE: add Redis backend if SignalR scale out is enabled
             //if (SenseNet.TaskManagement.Web.Configuration.SignalRSqlEnabled)
             //    GlobalHost.DependencyResolver.UseSqlServer(SenseNet.TaskManagement.Web.Configuration.SignalRDatabaseConnectionString);
-
-            SnLog.WriteInformation(
-                $"SignalR backplane is{(Web.Configuration.SignalRSqlEnabled ? string.Empty : " NOT")} enabled.",
-                EventId.TaskManagement.Lifecycle);
             
             //TODO: configure global error logging
             //httpConfiguration.Services.Add(typeof(IExceptionLogger), new WebExceptionLogger());
