@@ -9,9 +9,8 @@ namespace SenseNet.TaskManagement.Web
 {
     public static class Extensions
     {
-        public static string GetFinalizeUrl(this SnTask task)
+        public static string GetFinalizeUrl(this SnTask task, Application app)
         {
-            var app = ApplicationHandler.GetApplication(task.AppId);
             var combinedUrl = CombineUrls(app, task.FinalizeUrl, task.Id);
 
             // there is no local url: try the global
