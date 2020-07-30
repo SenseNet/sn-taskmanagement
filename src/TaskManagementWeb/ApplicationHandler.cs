@@ -3,24 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security;
 using System.Text;
 using System.Threading.Tasks;
-using IdentityModel.Client;
 using Newtonsoft.Json;
-using SenseNet.Client;
+using SenseNet.Client.Authentication;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
-using SenseNet.TaskManagement.Core.Configuration;
 using SenseNet.TaskManagement.Data;
 
 namespace SenseNet.TaskManagement.Web
 {
-    public static class ApplicationHandler
+    public class ApplicationHandler
     {
-        private static List<Application> _applications;
-        private static readonly object _appLock = new object();
-        private static IEnumerable<Application> Applications
+        private List<Application> _applications;
+        private readonly object _appLock = new object();
+        private IEnumerable<Application> Applications
         {
             get
             {
@@ -42,29 +39,34 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
+        private readonly TokenStore _tokenStore;
+        public ApplicationHandler(TokenStore tokenStore)
+        {
+            _tokenStore = tokenStore;
+        }
+
         /// <summary>
         /// Invalidates the application cache.
         /// </summary>
-        public static void Reset()
+        public void Reset()
         {
             _applications = null;
 
             SnTrace.TaskManagement.Write("Application cache reset.");
         }
 
-        public static void Initialize()
+        public void Initialize()
         {
             Reset();
 
             // reload apps
-            var apps = Applications;
+            var _ = Applications;
         }
-
         /// <summary>
         ///  Get one application by app id.
         /// </summary>
         /// <param name="appId">Aplication id</param>
-        public static Application GetApplication(string appId)
+        public Application GetApplication(string appId)
         {
             if (string.IsNullOrEmpty(appId))
                 return null;
@@ -82,13 +84,14 @@ namespace SenseNet.TaskManagement.Web
 
         //============================================================================ Communication
 
-        internal static async Task SendFinalizeNotificationAsync(SnTaskResult result)
+        internal async Task SendFinalizeNotificationAsync(SnTaskResult result)
         {
             if (result == null || result.Task == null || string.IsNullOrEmpty(result.Task.AppId))
                 return;
 
             // load the finalize url from the task or a global app setting
-            var finalizeUrl = result.Task.GetFinalizeUrl();
+            var app = GetApplication(result.Task.AppId);
+            var finalizeUrl = result.Task.GetFinalizeUrl(app);
 
             // cannot do much: no finalize url found for the task
             if (string.IsNullOrEmpty(finalizeUrl))
@@ -98,9 +101,7 @@ namespace SenseNet.TaskManagement.Web
                                          $"Agent: {result.AgentName}, " +
                                          $"Task: {result.Task.Id}, Type: {result.Task.Type}, " +
                                          $"task success: {result.Successful}");
-
-            var app = GetApplication(result.Task.AppId);
-
+            
             using (var client = await GetHttpClient(app.ApplicationUrl))
             {
                 // create post data
@@ -129,7 +130,7 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
-        internal static bool SendPingRequest(string appId)
+        internal bool SendPingRequest(string appId)
         {
             var app = !string.IsNullOrEmpty(appId)
                 ? GetApplication(appId)
@@ -166,7 +167,7 @@ namespace SenseNet.TaskManagement.Web
 
         //============================================================================ Helper methods
 
-        private static async Task<HttpClient> GetHttpClient(string appUrl)
+        private async Task<HttpClient> GetHttpClient(string appUrl)
         {
             // repo app request authentication: get auth token for appId and set it in a header
             var client = new HttpClient();
@@ -180,88 +181,14 @@ namespace SenseNet.TaskManagement.Web
                 Url = appUrl,
                 IsTrusted = true,
             };
-
-            var authority = await GetAuthorityUrl(server).ConfigureAwait(false);
-            if (string.IsNullOrEmpty(authority))
-                throw new SecurityException($"Authority could not be found for repository {appUrl}.");
-
-            var accessToken = await GetTokenAsync(authority).ConfigureAwait(false);
+            
+            //UNDONE: get app-specific secret from configuration
+            var accessToken = await _tokenStore.GetTokenAsync(server, "secret").ConfigureAwait(false);
 
             // add auth header
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
             return client;
-        }
-        
-        private static AuthenticationHeaderValue GetBasicAuthenticationHeader(UserCredentials user)
-        {
-            if (user == null)
-                return new AuthenticationHeaderValue("Basic", string.Empty);
-
-            return new AuthenticationHeaderValue("Basic",
-                Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format(@"{0}:{1}",
-                user.UserName,
-                user.Password))));
-        }
-
-
-
-        //UNDONE: remove temp token methods and use the official client library when available
-
-        private static async Task<string> GetTokenAsync(string authority)
-        {
-            var client = new System.Net.Http.HttpClient();
-            var disco = await client.GetDiscoveryDocumentAsync(authority).ConfigureAwait(false);
-            if (disco.IsError)
-            {
-                //TODO: log
-                return string.Empty;
-            }
-
-            // request token
-            var tokenResponse = await client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
-            {
-                Address = disco.TokenEndpoint,
-
-                //UNDONE: obtain repository-specific secret
-                ClientId = "client",
-                ClientSecret = "secret",
-                Scope = "sensenet"
-            });
-
-            if (tokenResponse.IsError)
-            {
-                //TODO: log
-                return string.Empty;
-            }
-
-            return tokenResponse.AccessToken;
-        }
-
-        private static async Task<string> GetAuthorityUrl(Client.ServerContext server)
-        {
-            var req = new ODataRequest(server)
-            {
-                Path = "/Root",
-                ActionName = "GetClientRequestParameters"
-            };
-
-            //UNDONE: maybe the client type should be configurable
-            req.Parameters.Add("clientType", "client");
-
-            try
-            {
-                dynamic response = await RESTCaller.GetResponseJsonAsync(req, server)
-                    .ConfigureAwait(false);
-
-                return response.authority;
-            }
-            catch (Exception ex)
-            {
-                SnTrace.System.WriteError($"Could not access repository {server.Url} for getting the authority url. {ex.Message}");
-            }
-
-            return string.Empty;
         }
     }
 }

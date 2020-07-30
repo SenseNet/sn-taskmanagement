@@ -21,11 +21,14 @@ namespace SenseNet.TaskManagement.Controllers
     {
         private readonly IHubContext<AgentHub> _agentHub;
         private readonly IHubContext<TaskMonitorHub> _monitorHub;
+        private readonly ApplicationHandler _applicationHandler;
 
-        public TaskController(IHubContext<AgentHub> agentHub, IHubContext<TaskMonitorHub> monitorHub)
+        public TaskController(IHubContext<AgentHub> agentHub, IHubContext<TaskMonitorHub> monitorHub,
+            ApplicationHandler appHandler)
         {
             _agentHub = agentHub;
             _monitorHub = monitorHub;
+            _applicationHandler = appHandler;
         }
 
         /// <summary>
@@ -41,7 +44,7 @@ namespace SenseNet.TaskManagement.Controllers
             try
             {
                 // load the corresponding application to make sure the appid is valid
-                app = ApplicationHandler.GetApplication(taskRequest.AppId);
+                app = _applicationHandler.GetApplication(taskRequest.AppId);
             }
             catch (Exception ex)
             {
@@ -131,7 +134,7 @@ namespace SenseNet.TaskManagement.Controllers
             }
 
             // invalidate app cache
-            ApplicationHandler.Reset();
+            _applicationHandler.Reset();
 
             return new RegisterApplicationResult();
         }

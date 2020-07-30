@@ -21,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SenseNet.Diagnostics;
+using SenseNet.Extensions.DependencyInjection;
 using EventId = SenseNet.Diagnostics.EventId;
 
 namespace SenseNet.TaskManagement.Web
@@ -58,9 +59,12 @@ namespace SenseNet.TaskManagement.Web
                     options.AllowAnyMethod();
                 });
             });
+
+            services.AddSenseNetClientTokenStore();
+            services.AddSingleton<ApplicationHandler>();
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationHandler appHandler)
         {
             SnLog.WriteInformation("Starting TaskManagement.Web", EventId.TaskManagement.Lifecycle);
 
@@ -115,7 +119,7 @@ namespace SenseNet.TaskManagement.Web
             SnLog.WriteInformation("SenseNet TaskManagement app started.", EventId.TaskManagement.Lifecycle);
 
             // load apps
-            ApplicationHandler.Initialize();
+            appHandler.Initialize();
         }
     }
 }

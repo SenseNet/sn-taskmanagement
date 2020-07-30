@@ -29,10 +29,12 @@ namespace SenseNet.TaskManagement.Hubs
     public class AgentHub : Hub
     {
         private readonly IHubContext<TaskMonitorHub> _monitorHub;
+        private readonly ApplicationHandler _applicationHandler;
 
-        public AgentHub(IHubContext<TaskMonitorHub> monitorHub)
+        public AgentHub(IHubContext<TaskMonitorHub> monitorHub, ApplicationHandler appHandler)
         {
             _monitorHub = monitorHub;
+            _applicationHandler = appHandler;
         }
 
         //===================================================================== Properties
@@ -103,12 +105,12 @@ namespace SenseNet.TaskManagement.Hubs
                     return;
                 }
 
-                var doesApplicationNeedNotification = !string.IsNullOrWhiteSpace(taskResult.Task.GetFinalizeUrl());
-                // first we make sure that the app is accessible by sending a ping request
-                if (doesApplicationNeedNotification && !ApplicationHandler.SendPingRequest(taskResult.Task.AppId))
-                {
-                    var app = ApplicationHandler.GetApplication(taskResult.Task.AppId);
+                var app = _applicationHandler.GetApplication(taskResult.Task.AppId);
+                var doesApplicationNeedNotification = !string.IsNullOrWhiteSpace(taskResult.Task.GetFinalizeUrl(app));
 
+                // first we make sure that the app is accessible by sending a ping request
+                if (doesApplicationNeedNotification && !_applicationHandler.SendPingRequest(taskResult.Task.AppId))
+                {
                     SnLog.WriteError(string.Format("Ping request to application {0} ({1}) failed when finalizing task #{2}. Task success: {3}, error: {4}",
                         taskResult.Task.AppId,
                         app == null ? "unknown app" : app.ApplicationUrl,
@@ -130,7 +132,7 @@ namespace SenseNet.TaskManagement.Hubs
                     // This method does not need to be awaited, because we do not want to do anything 
                     // with the result, only notify the app that the task has been finished.
 #pragma warning disable 4014
-                    ApplicationHandler.SendFinalizeNotificationAsync(taskResult);
+                    _applicationHandler.SendFinalizeNotificationAsync(taskResult);
 #pragma warning restore 4014
                 }
 
