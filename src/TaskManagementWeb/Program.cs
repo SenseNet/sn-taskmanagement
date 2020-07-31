@@ -1,8 +1,7 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using SenseNet.TaskManagement.Web;
 
-namespace TaskManagement.Web
+namespace SenseNet.TaskManagement.Web
 {
     public class Program
     {

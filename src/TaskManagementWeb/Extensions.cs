@@ -1,8 +1,5 @@
 ﻿using SenseNet.TaskManagement.Core;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using SenseNet.Diagnostics;
 
 namespace SenseNet.TaskManagement.Web
