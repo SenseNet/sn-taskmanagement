@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 
+// ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Web
 {
     public class Application
