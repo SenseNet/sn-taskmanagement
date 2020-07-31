@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using SenseNet.Diagnostics;
 
-namespace SenseNetTaskAgent
+namespace SenseNet.TaskManagement.TaskAgent
 {
     /// <summary>
     /// Tells SignalR to infinitely retry reconnecting to the server.

@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
-using SenseNetTaskAgent;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

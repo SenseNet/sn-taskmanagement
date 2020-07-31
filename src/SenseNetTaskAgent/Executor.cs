@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Timers;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
@@ -19,13 +18,13 @@ namespace SenseNet.TaskManagement.TaskAgent
 
     internal class TestExecutor : IExecutor, IDisposable
     {
-        private Timer _timer = new Timer(1000.0);
+        private readonly Timer _timer = new Timer(1000.0);
 
         public SnTask Task { get; private set; }
 
         public TestExecutor()
         {
-            _timer.Elapsed += _timer_Elapsed;
+            _timer.Elapsed += Timer_Elapsed;
         }
 
         public void Dispose()
@@ -33,7 +32,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             _timer.Dispose();
         }
 
-        void _timer_Elapsed(object sender, ElapsedEventArgs e)
+        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
             Console.Write("#");
         }
@@ -95,9 +94,9 @@ namespace SenseNet.TaskManagement.TaskAgent
             var passwordParameter = "PASSWORD:\"" + (app?.Secret ?? string.Empty) + "\"";
             var dataParameter = "DATA:\"" + EscapeArgument(task.TaskData) + "\"";
 
-            var prms = new List<string> { userParameter, passwordParameter, dataParameter };
+            var parameters = new List<string> { userParameter, passwordParameter, dataParameter };
+            var processArgs = string.Join(" ", parameters);
 
-            var processArgs = string.Join(" ", prms);
             var startInfo = new ProcessStartInfo(workerExe, processArgs)
             {
                 UseShellExecute = false,
@@ -109,11 +108,13 @@ namespace SenseNet.TaskManagement.TaskAgent
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             };
-            //_process = Process.Start(startInfo);
-            _process = new Process();
-            _process.EnableRaisingEvents = true;
-            _process.StartInfo = startInfo;
-            _process.OutputDataReceived += process_OutputDataReceived;
+
+            _process = new Process
+            {
+                EnableRaisingEvents = true, 
+                StartInfo = startInfo
+            };
+            _process.OutputDataReceived += Process_OutputDataReceived;
 
             SnLog.WriteInformation(string.Format(
                 "Task#{1} execution STARTED on agent {0}:\r\n    id: {1},\r\n    type: {2},\r\n    hash: {3},\r\n    order: {4},\r\n    registered: {5},\r\n    key: {6},\r\n    data: {7}"
@@ -123,7 +124,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             _process.BeginOutputReadLine();
             _process.WaitForExit();
 
-            _process.OutputDataReceived -= process_OutputDataReceived;
+            _process.OutputDataReceived -= Process_OutputDataReceived;
             var result = _process.ExitCode;
 
             if (result != 0)
@@ -144,17 +145,14 @@ namespace SenseNet.TaskManagement.TaskAgent
                 _process.Kill();
         }
 
-        void process_OutputDataReceived(object sender, DataReceivedEventArgs e)
+        private void Process_OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
             Agent.OutputDataReceived(sender, e);
         }
 
         private string GetWorkerExePath(SnTask task)
         {
-            string exePath;
-            if (Agent.TaskExecutors.TryGetValue(task.Type, out exePath))
-                return exePath;
-            return null;
+            return Agent.TaskExecutors.TryGetValue(task.Type, out var exePath) ? exePath : null;
         }
 
         private static string EscapeArgument(string arg)
@@ -192,6 +190,5 @@ namespace SenseNet.TaskManagement.TaskAgent
             _disposed = true;
         }
         #endregion
-
     }
 }
