@@ -88,9 +88,9 @@ namespace SenseNet.TaskManagement.Hubs
         /// <param name="appId">Application id to identify the client application.</param>
         /// <param name="tag">If a tag is provided, events will be filtered by it.</param>
         /// <returns></returns>
-        public SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
+        public Task<SnTaskEvent[]> GetUnfinishedTasks(string appId, string tag)
         {
-            return _dataHandler.GetUnfinishedTasks(appId, tag);
+            return _dataHandler.GetUnfinishedTasksAsync(appId, tag, Context.ConnectionAborted);
         }
 
         /// <summary>
@@ -100,9 +100,9 @@ namespace SenseNet.TaskManagement.Hubs
         /// <param name="tag">If a tag is provided, events will be filtered by it.</param>
         /// <param name="taskId">Id of the task to load events for.</param>
         /// <returns></returns>
-        public SnTaskEvent[] GetDetailedTaskEvents(string appId, string tag, int taskId)
+        public Task<SnTaskEvent[]> GetDetailedTaskEvents(string appId, string tag, int taskId)
         {
-            return _dataHandler.GetDetailedTaskEvents(appId, tag, taskId);
+            return _dataHandler.GetDetailedTaskEventsAsync(appId, tag, taskId, Context.ConnectionAborted);
         }
 
         //===================================================================== Overrides

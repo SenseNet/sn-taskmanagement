@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Data;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using SenseNet.Diagnostics;
@@ -149,14 +151,14 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         //================================================================================= Manage tasks
 
-        public SnTaskEvent[] GetUnfinishedTasks(string appId, string tag)
+        public async Task<SnTaskEvent[]> GetUnfinishedTasksAsync(string appId, string tag, CancellationToken cancellationToken)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetUnfinishedTasks: appId: " + (appId ?? "") + ", tag: " + (tag ?? ""));
 
             try
             {
-                using var cn = new SqlConnection(_connectionString);
-                using var cm = cn.CreateCommand();
+                await using var cn = new SqlConnection(_connectionString);
+                await using var cm = cn.CreateCommand();
                 cm.CommandType = CommandType.Text;
 
 #pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
@@ -171,11 +173,11 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 if (tag != null)
                     cm.Parameters.Add("@Tag", SqlDbType.NVarChar, 450).Value = tag;
 
-                cn.Open();
-                var reader = cm.ExecuteReader();
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                var reader = await cm.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
                 var result = new List<SnTaskEvent>();
 
-                while (reader.Read())
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                     result.Add(GetTaskEventFromReader(reader));
 
                 return result.ToArray();
@@ -185,14 +187,14 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 throw new TaskManagementException("Error during getting unfinished tasks.", ex);
             }
         }
-        public SnTaskEvent[] GetDetailedTaskEvents(string appId, string tag, int taskId)
+        public async Task<SnTaskEvent[]> GetDetailedTaskEventsAsync(string appId, string tag, int taskId, CancellationToken cancellationToken)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler GetDetailedTaskEvents: appId: " + (appId ?? "") + ", tag: " + (tag ?? "") + ", taskId: " + taskId);
 
             try
             {
-                using var cn = new SqlConnection(_connectionString);
-                using var cm = cn.CreateCommand();
+                await using var cn = new SqlConnection(_connectionString);
+                await using var cm = cn.CreateCommand();
                 cm.CommandType = CommandType.Text;
 
 #pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
@@ -207,11 +209,11 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 if (tag != null)
                     cm.Parameters.Add("@Tag", SqlDbType.NVarChar, 450).Value = tag;
 
-                cn.Open();
-                var reader = cm.ExecuteReader();
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                var reader = await cm.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
                 var result = new List<SnTaskEvent>();
 
-                while (reader.Read())
+                while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
                     result.Add(GetTaskEventFromReader(reader));
 
                 return result.ToArray();
@@ -243,7 +245,8 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             };
         }
 
-        public RegisterTaskResult RegisterTask(string type, string title, TaskPriority priority, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
+        public async Task<RegisterTaskResult> RegisterTaskAsync(string type, string title, TaskPriority priority, string appId, 
+            string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName, CancellationToken cancellationToken)
         {
             double order;
             switch (priority)
@@ -261,7 +264,8 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             try
             {
-                result = RegisterTask(type, title, order, appId, tag, finalizeUrl, hash, taskDataSerialized, machineName);
+                result = await RegisterTaskAsync(type, title, order, appId, tag, finalizeUrl, hash, taskDataSerialized, 
+                    machineName, cancellationToken).ConfigureAwait(false);
             }
             catch (TaskManagementException)
             {
@@ -286,11 +290,12 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             return result;
         }
-        private RegisterTaskResult RegisterTask(string type, string title, double order, string appId, string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName)
+        private async Task<RegisterTaskResult> RegisterTaskAsync(string type, string title, double order, string appId, 
+            string tag, string finalizeUrl, long hash, string taskDataSerialized, string machineName, CancellationToken cancellationToken)
         {
-            using var cn = new SqlConnection(_connectionString);
-            cn.Open();
-            var tran = cn.BeginTransaction();
+            await using var cn = new SqlConnection(_connectionString);
+            await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            var tran = (SqlTransaction)(await cn.BeginTransactionAsync(cancellationToken).ConfigureAwait(false));
             var cm1 = cn.CreateCommand();
             SqlCommand cm2 = null;
             cm1.CommandText = REGISTERTASKSQL;
@@ -311,10 +316,10 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
                 var result = new RegisterTaskResult();
                 int id;
-                using (var reader = cm1.ExecuteReader())
+                await using (var reader = await cm1.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
                 {
                     // there must be only one row
-                    reader.Read();
+                    await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
                     var o = reader[0];
 
                     // task registration was not successful
@@ -344,62 +349,62 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 {
                     cm2 = cn.CreateCommand();
                     cm2.Transaction = tran;
-                    WriteRegisterTaskEvent(result, machineName, cm2);
+                    await WriteRegisterTaskEventAsync(result, machineName, cm2, cancellationToken).ConfigureAwait(false);
                 }
 
-                tran.Commit();
+                await tran.CommitAsync(cancellationToken).ConfigureAwait(false);
                 return result;
             }
             catch
             {
-                tran.Rollback();
+                await tran.RollbackAsync(cancellationToken).ConfigureAwait(false);
                 throw;
             }
             finally
             {
-                cm1.Dispose();
+                await cm1.DisposeAsync().ConfigureAwait(false);
                 if (cm2 != null)
-                    cm2.Dispose();
+                    await cm2.DisposeAsync().ConfigureAwait(false);
             }
         }
 
-        public void FinalizeTask(SnTaskResult taskResult)
+        public async Task FinalizeTaskAsync(SnTaskResult taskResult, CancellationToken cancellationToken)
         {
             SnTrace.TaskManagement.Write("TaskDataHandler FinalizeTask: " + (taskResult.Successful ? "Done" : "Error") + ", Id: " + taskResult.Task.Id);
 
-            using (var cn = new SqlConnection(_connectionString))
+            await using (var cn = new SqlConnection(_connectionString))
             {
-                using var cm = new SqlCommand(DELETETASKSQL, cn) { CommandType = CommandType.Text };
+                await using var cm = new SqlCommand(DELETETASKSQL, cn) { CommandType = CommandType.Text };
                 cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskResult.Task.Id;
-                cn.Open();
-                cm.ExecuteNonQuery();
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                await cm.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
 
-            WriteFinishExecutionEvent(taskResult);
+            await WriteFinishExecutionEventAsync(taskResult, cancellationToken).ConfigureAwait(false);
         }
 
-        public void RefreshLock(int taskId)
+        public async Task RefreshLockAsync(int taskId, CancellationToken cancellationToken)
         {
-            using var cn = new SqlConnection(_connectionString);
-            using var cm = new SqlCommand(REFRESHLOCKSQL, cn) { CommandType = CommandType.Text };
+            await using var cn = new SqlConnection(_connectionString);
+            await using var cm = new SqlCommand(REFRESHLOCKSQL, cn) { CommandType = CommandType.Text };
             cm.Parameters.Add("@Id", SqlDbType.Int).Value = taskId;
 
-            cn.Open();
-            cm.ExecuteNonQuery();
+            await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await cm.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
-        public SnTask GetNextAndLock(string machineName, string agentName, string[] capabilities)
+        public async Task<SnTask> GetNextAndLock(string machineName, string agentName, string[] capabilities, CancellationToken cancellationToken)
         {
-            var sql = String.Format(GETANDLOCKSQL, String.Join("', '", capabilities));
-            using var cn = new SqlConnection(_connectionString);
+            var sql = string.Format(GETANDLOCKSQL, string.Join("', '", capabilities));
+            await using var cn = new SqlConnection(_connectionString);
 #pragma warning disable CA2100 // Review SQL queries for security vulnerabilities
-            using var cm = new SqlCommand(sql, cn) { CommandType = CommandType.Text };
+            await using var cm = new SqlCommand(sql, cn) { CommandType = CommandType.Text };
 #pragma warning restore CA2100 // Review SQL queries for security vulnerabilities
             cm.Parameters.Add("@LockedBy", SqlDbType.NVarChar, 450).Value = agentName;
             cm.Parameters.AddWithValue("@ExecutionTimeoutInSeconds", _config.TaskExecutionTimeoutInSeconds);
 
-            cn.Open();
-            var reader = cm.ExecuteReader();
-            while (reader.Read())
+            await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
+            var reader = await cm.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+            while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
             {
                 var task = new SnTask
                 {
@@ -416,7 +421,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                     Hash = reader.GetInt64(reader.GetOrdinal("Hash")),
                     TaskData = GetSafeString(reader, reader.GetOrdinal("TaskData")),
                 };
-                WriteStartExecutionEvent(task, machineName, agentName);
+                await WriteStartExecutionEventAsync(task, machineName, agentName, cancellationToken).ConfigureAwait(false);
                 return task;
             }
             return null;
@@ -434,25 +439,25 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             return result;
         }
 
-        public void StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public Task StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task, CancellationToken cancellationToken)
         {
-            WriteStartSubtaskEvent(subtask, task, machineName, agentName);
+            return WriteStartSubtaskEventAsync(subtask, task, machineName, agentName, cancellationToken);
         }
-        public void FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public Task FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task, CancellationToken cancellationToken)
         {
-            WriteFinishSubtaskEvent(subtask, task, machineName, agentName);
+            return WriteFinishSubtaskEventAsync(subtask, task, machineName, agentName, cancellationToken);
         }
 
         //================================================================================= Manage applications
 
-        public Application RegisterApplication(RegisterApplicationRequest request)
+        public async Task<Application> RegisterApplicationAsync(RegisterApplicationRequest request, CancellationToken cancellationToken)
         {
-            using var cn = new SqlConnection(_connectionString);
+            await using var cn = new SqlConnection(_connectionString);
             SqlCommand cm1 = null;
 
             try
             {
-                cn.Open();
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
 
                 cm1 = cn.CreateCommand();
                 cm1.CommandText = REGISTERAPPLICATIONSQL;
@@ -478,10 +483,10 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = request.AppId;
                 cm1.Parameters.Add("@AppData", SqlDbType.NVarChar).Value = appData;
 
-                using (var reader = cm1.ExecuteReader())
+                await using (var reader = await cm1.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
                 {
                     // there must be only one row
-                    reader.Read();
+                    await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
 
                     resultApp.RegistrationDate = reader.GetDateTime(reader.GetOrdinal("RegistrationDate"));
                     resultApp.LastUpdateDate = reader.GetDateTime(reader.GetOrdinal("LastUpdateDate"));
@@ -498,7 +503,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
             finally
             {
                 if (cm1 != null)
-                    cm1.Dispose();
+                    await cm1.DisposeAsync().ConfigureAwait(false);
             }
         }
 
@@ -547,24 +552,24 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         //================================================================================= Write events
 
-        private void WriteRegisterTaskEvent(RegisterTaskResult result, string machineName, SqlCommand command)
+        private Task WriteRegisterTaskEventAsync(RegisterTaskResult result, string machineName, SqlCommand command, CancellationToken cancellationToken)
         {
             var task = result.Task;
-            WriteEvent(command, result.NewlyCreated ? TaskEventType.Registered : TaskEventType.Updated, task.Id,
+            return WriteEventAsync(command, result.NewlyCreated ? TaskEventType.Registered : TaskEventType.Updated, task.Id,
                 null, task.Title, null,
                 task.AppId, machineName, null,
-                task.Tag, task.Type, task.Order, task.Hash, task.TaskData);
+                task.Tag, task.Type, task.Order, task.Hash, task.TaskData, cancellationToken);
         }
-        private void WriteStartExecutionEvent(SnTask task, string machineName, string agentName)
+        private Task WriteStartExecutionEventAsync(SnTask task, string machineName, string agentName, CancellationToken cancellationToken)
         {
-            WriteEvent(null, TaskEventType.Started, task.Id, null, task.Title, null, task.AppId,
+            return WriteEventAsync(null, TaskEventType.Started, task.Id, null, task.Title, null, task.AppId,
                  machineName, agentName, task.Tag,
-                 null, null, null, null);
+                 null, null, null, null, cancellationToken);
         }
-        private void WriteFinishExecutionEvent(SnTaskResult taskResult)
+        private Task WriteFinishExecutionEventAsync(SnTaskResult taskResult, CancellationToken cancellationToken)
         {
             var task = taskResult.Task;
-            WriteEvent(null,
+            return WriteEventAsync(null,
                 taskResult.Successful ? TaskEventType.Done : TaskEventType.Failed,
                 task.Id,
                 null,
@@ -574,22 +579,22 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 taskResult.MachineName,
                 taskResult.AgentName,
                 task.Tag,
-                null, null, null, null);
+                null, null, null, null, cancellationToken);
         }
-        private void WriteStartSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
+        private Task WriteStartSubtaskEventAsync(SnSubtask subtask, SnTask task, string machine, string agent, CancellationToken cancellationToken)
         {
-            WriteEvent(null, TaskEventType.SubtaskStarted, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
-                , null, null, null, null);
+            return WriteEventAsync(null, TaskEventType.SubtaskStarted, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
+                , null, null, null, null, cancellationToken);
         }
-        private void WriteFinishSubtaskEvent(SnSubtask subtask, SnTask task, string machine, string agent)
+        private Task WriteFinishSubtaskEventAsync(SnSubtask subtask, SnTask task, string machine, string agent, CancellationToken cancellationToken)
         {
-            WriteEvent(null, TaskEventType.SubtaskFinished, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
-                , null, null, null, null);
+            return WriteEventAsync(null, TaskEventType.SubtaskFinished, task.Id, subtask.Id, subtask.Title, subtask.Details, task.AppId, machine, agent, task.Tag
+                , null, null, null, null, cancellationToken);
         }
 
-        private void WriteEvent(SqlCommand cm, string eventType, int taskId, Guid? subtaskId, string title, string details,
+        private async Task WriteEventAsync(SqlCommand cm, string eventType, int taskId, Guid? subtaskId, string title, string details,
             string appId, string machine, string agent, string tag,
-            string taskType, double? taskOrder, long? taskHash, string taskData)
+            string taskType, double? taskOrder, long? taskHash, string taskData, CancellationToken cancellationToken)
         {
             SqlConnection cn = null;
             if (cm == null)
@@ -597,7 +602,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 cn = new SqlConnection(_connectionString);
                 cm = cn.CreateCommand();
                 cm.Connection = cn;
-                cn.Open();
+                await cn.OpenAsync(cancellationToken).ConfigureAwait(false);
             }
 
             try
@@ -622,15 +627,15 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 cm.Parameters.Add("@TaskHash", SqlDbType.BigInt).Value = taskHash.HasValue ? (object)taskHash.Value : DBNull.Value;
                 cm.Parameters.Add("@TaskData", SqlDbType.NVarChar).Value = (object)taskData ?? DBNull.Value;
 
-                cm.ExecuteNonQuery();
+                await cm.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
             }
             finally
             {
                 if (cn != null)
                 {
-                    cn.Close();
-                    cm.Dispose();
-                    cn.Dispose();
+                    await cn.CloseAsync().ConfigureAwait(false);
+                    await cm.DisposeAsync().ConfigureAwait(false);
+                    await cn.DisposeAsync().ConfigureAwait(false);
                 }
             }
         }

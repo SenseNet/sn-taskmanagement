@@ -48,19 +48,21 @@ namespace SenseNet.TaskManagement.Hubs
 
         //===================================================================== Hub API
 
-        public SnTask GetTask(string machineName, string agentName, string[] capabilities)
+        public async Task<SnTask> GetTask(string machineName, string agentName, string[] capabilities)
         {
             SnTrace.TaskManagement.Write("AgentHub GetTask called. Agent: {0}, capabilities: {1}.", agentName, string.Join(", ", capabilities));
 
             try
             {
-                var task = _dataHandler.GetNextAndLock(machineName, agentName, capabilities);
+                var task = await _dataHandler.GetNextAndLock(machineName, agentName, capabilities, Context.ConnectionAborted)
+                    .ConfigureAwait(false);
+
                 SnTrace.TaskManagement.Write("AgentHub TaskDataHandler.GetNextAndLock returned: " + (task == null ? "null" : "task " + task.Id));
 
                 // task details are not passed to the monitor yet
                 if (task != null)
-                    _monitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null, 
-                        task.AppId, task.Tag, machineName, agentName)).GetAwaiter().GetResult(); 
+                    await _monitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null, 
+                        task.AppId, task.Tag, machineName, agentName)).ConfigureAwait(false); 
 
                 return task;
             }
@@ -72,20 +74,20 @@ namespace SenseNet.TaskManagement.Hubs
             return null;
         }
 
-        public void RefreshLock(string machineName, string agentName, int taskId)
+        public async Task RefreshLock(string machineName, string agentName, int taskId)
         {
             SnTrace.TaskManagement.Write("AgentHub RefreshLock. Agent: {0}, task: {1}.", agentName, taskId);
-            _dataHandler.RefreshLock(taskId);
+            await _dataHandler.RefreshLockAsync(taskId, Context.ConnectionAborted).ConfigureAwait(false); ;
         }
 
-        public void Heartbeat(string machineName, string agentName, SnHealthRecord healthRecord)
+        public async Task Heartbeat(string machineName, string agentName, SnHealthRecord healthRecord)
         {
             SnTrace.TaskManagement.Write($"AgentHub Heartbeat. Machine: {machineName}, Agent: " +
                                          $"{agentName}, Process id: {healthRecord.ProcessId}, " +
                                          $"RAM: {healthRecord.RAM}, CPU: {healthRecord.CPU}.");
             try
             {
-                _monitorHub.Heartbeat(machineName, agentName, healthRecord).GetAwaiter().GetResult();
+                await _monitorHub.Heartbeat(machineName, agentName, healthRecord).ConfigureAwait(false);
             }
             catch (Exception ex)
             {                
@@ -93,7 +95,7 @@ namespace SenseNet.TaskManagement.Hubs
             }
         }
 
-        public void TaskFinished(SnTaskResult taskResult)
+        public async Task TaskFinished(SnTaskResult taskResult)
         {
             SnTrace.TaskManagement.Write("AgentHub TaskFinished called. Agent: {0} / {1}, taskId: {2}, code: {3}, error: {4}",
                        taskResult.MachineName, taskResult.AgentName, taskResult.Task.Id, taskResult.ResultCode,
@@ -111,21 +113,21 @@ namespace SenseNet.TaskManagement.Hubs
                 var doesApplicationNeedNotification = !string.IsNullOrWhiteSpace(taskResult.Task.GetFinalizeUrl(app));
 
                 // first we make sure that the app is accessible by sending a ping request
-                if (doesApplicationNeedNotification && !_applicationHandler.SendPingRequest(taskResult.Task.AppId))
+                if (doesApplicationNeedNotification && !(await _applicationHandler.SendPingRequestAsync(taskResult.Task.AppId, Context.ConnectionAborted)
+                        .ConfigureAwait(false)))
                 {
-                    SnLog.WriteError(string.Format("Ping request to application {0} ({1}) failed when finalizing task #{2}. Task success: {3}, error: {4}",
-                        taskResult.Task.AppId,
-                        app == null ? "unknown app" : app.ApplicationUrl,
-                        taskResult.Task.Id,
-                        taskResult.Successful,
-                        taskResult.Error == null ? "-" : taskResult.Error.ToString()),
+                    SnLog.WriteError($"Ping request to application {taskResult.Task.AppId} " +
+                                     $"({(app == null ? "unknown app" : app.ApplicationUrl)}) " +
+                                     $"failed when finalizing task #{taskResult.Task.Id}. " +
+                                     $"Task success: {taskResult.Successful}, " +
+                                     $"error: {(taskResult.Error == null ? "-" : taskResult.Error.ToString())}",
                         EventId.TaskManagement.Communication);
 
                     doesApplicationNeedNotification = false;
                 }
 
                 // remove the task from the database first
-                _dataHandler.FinalizeTask(taskResult);
+                await _dataHandler.FinalizeTaskAsync(taskResult, Context.ConnectionAborted).ConfigureAwait(false);
 
                 SnTrace.TaskManagement.Write("AgentHub TaskFinished: task {0} has been deleted.", taskResult.Task.Id);
 
@@ -134,7 +136,7 @@ namespace SenseNet.TaskManagement.Hubs
                     // This method does not need to be awaited, because we do not want to do anything 
                     // with the result, only notify the app that the task has been finished.
 #pragma warning disable 4014
-                    _applicationHandler.SendFinalizeNotificationAsync(taskResult);
+                    _applicationHandler.SendFinalizeNotificationAsync(taskResult, CancellationToken.None);
 #pragma warning restore 4014
                 }
 
@@ -147,7 +149,7 @@ namespace SenseNet.TaskManagement.Hubs
                         taskResult.ResultData, taskResult.Task.AppId, taskResult.Task.Tag,
                         taskResult.MachineName, taskResult.AgentName);
 
-                _monitorHub.OnTaskEvent(te).GetAwaiter().GetResult();
+                await _monitorHub.OnTaskEvent(te).ConfigureAwait(false);
             }
             catch (Exception ex)
             {                
@@ -155,16 +157,16 @@ namespace SenseNet.TaskManagement.Hubs
             }
         }
 
-        public void StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public async Task StartSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
         {
             SnTrace.TaskManagement.Write("AgentHub StartSubtask. Task id:{0}, agent:{1}, title:{2}", 
                 task.Id, agentName, subtask.Title);
             try
             { 
-                _dataHandler.StartSubtask(machineName, agentName, subtask, task);
+                await _dataHandler.StartSubtask(machineName, agentName, subtask, task, Context.ConnectionAborted).ConfigureAwait(false);
 
-                _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskStartedEvent(task.Id, subtask.Title, subtask.Details, 
-                    task.AppId, task.Tag, machineName, agentName, subtask.Id)).GetAwaiter().GetResult();
+                await _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskStartedEvent(task.Id, subtask.Title, subtask.Details, 
+                    task.AppId, task.Tag, machineName, agentName, subtask.Id)).ConfigureAwait(false);
             }
             catch (Exception ex)
             {                
@@ -172,15 +174,15 @@ namespace SenseNet.TaskManagement.Hubs
             }
         }
         
-        public void FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
+        public async Task FinishSubtask(string machineName, string agentName, SnSubtask subtask, SnTask task)
         {
             SnTrace.TaskManagement.Write("AgentHub FinishSubtask. Task id:{0}, agent:{1}, title:{2}", task.Id, agentName, subtask.Title);
             try
             {
-                _dataHandler.FinishSubtask(machineName, agentName, subtask, task);
+                await _dataHandler.FinishSubtask(machineName, agentName, subtask, task, Context.ConnectionAborted).ConfigureAwait(false);
                 
-                _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskFinishedEvent(task.Id, subtask.Title, subtask.Details, 
-                    task.AppId, task.Tag, machineName, agentName, subtask.Id)).GetAwaiter().GetResult();
+                await _monitorHub.OnTaskEvent(SnTaskEvent.CreateSubtaskFinishedEvent(task.Id, subtask.Title, subtask.Details, 
+                    task.AppId, task.Tag, machineName, agentName, subtask.Id)).ConfigureAwait(false);
             }
             catch (Exception ex)
             {                
@@ -188,13 +190,13 @@ namespace SenseNet.TaskManagement.Hubs
             }
         }
 
-        public void WriteProgress(string machineName, string agentName, SnProgressRecord progressRecord)
+        public async Task WriteProgress(string machineName, string agentName, SnProgressRecord progressRecord)
         {
             SnTrace.TaskManagement.Write("AgentHub WriteProgress. agent:{0}, progress:{1}", 
                 agentName, progressRecord);               
             try
             {
-                _monitorHub.WriteProgress(machineName, agentName, progressRecord).GetAwaiter().GetResult();
+                await _monitorHub.WriteProgress(machineName, agentName, progressRecord).ConfigureAwait(false);
             }
             catch (Exception ex)
             {                

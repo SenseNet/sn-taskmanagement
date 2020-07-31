@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using SenseNet.Client.Authentication;
@@ -88,7 +89,7 @@ namespace SenseNet.TaskManagement.Web
 
         //============================================================================ Communication
 
-        internal async Task SendFinalizeNotificationAsync(SnTaskResult result)
+        internal async Task SendFinalizeNotificationAsync(SnTaskResult result, CancellationToken cancellationToken)
         {
             if (result?.Task == null || string.IsNullOrEmpty(result.Task.AppId))
                 return;
@@ -114,11 +115,11 @@ namespace SenseNet.TaskManagement.Web
 
             try
             {
-                var response = await client.PostAsync(finalizeUrl, content);
+                var response = await client.PostAsync(finalizeUrl, content, cancellationToken).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var responseText = await response.Content.ReadAsStringAsync();
+                    var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 
                     SnLog.WriteWarning($"Error during finalize REST API call. Url: {finalizeUrl}, Status code: {response.StatusCode}. Response: {responseText}",
                         EventId.TaskManagement.General);
@@ -130,7 +131,7 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
-        internal bool SendPingRequest(string appId)
+        internal async Task<bool> SendPingRequestAsync(string appId, CancellationToken cancellationToken)
         {
             var app = !string.IsNullOrEmpty(appId)
                 ? GetApplication(appId)
@@ -143,14 +144,13 @@ namespace SenseNet.TaskManagement.Web
                 return false;
             }
 
-            //UNDONE: make this method async
-            using var client = GetHttpClient(app.ApplicationUrl).GetAwaiter().GetResult();
+            using var client = await GetHttpClient(app.ApplicationUrl).ConfigureAwait(false);
 
             try
             {
                 // Send a simple ping request to the application and 
                 // make sure it returns a 200 OK.
-                var response = client.GetAsync(app.ApplicationUrl).Result;
+                var response = await client.GetAsync(app.ApplicationUrl, cancellationToken).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
                 SnTrace.TaskManagement.Write("AgentHub SendPingRequest completed successfully for appid {0}.", appId);

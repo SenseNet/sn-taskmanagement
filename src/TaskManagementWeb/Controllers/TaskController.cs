@@ -1,20 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Net.Http;
-using System.Web;
-//using System.Web.Http;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
 using SenseNet.TaskManagement.Hubs;
 using SenseNet.TaskManagement.Web;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using SenseNet.Diagnostics;
 
+// ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Controllers
 {
     public class TaskController : Controller
@@ -70,7 +65,7 @@ namespace SenseNet.TaskManagement.Controllers
                     ? ComputeTaskHash(taskRequest.Type + taskRequest.AppId + taskRequest.Tag + taskRequest.TaskData)
                     : taskRequest.Hash;
 
-                result = _dataHandler.RegisterTask(
+                result = await _dataHandler.RegisterTaskAsync(
                     taskRequest.Type,
                     taskRequest.Title,
                     taskRequest.Priority,
@@ -79,7 +74,8 @@ namespace SenseNet.TaskManagement.Controllers
                     taskRequest.FinalizeUrl,
                     hash,
                     taskRequest.TaskData,
-                    taskRequest.MachineName);
+                    taskRequest.MachineName,
+                    HttpContext.RequestAborted).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -117,11 +113,12 @@ namespace SenseNet.TaskManagement.Controllers
         /// </summary>
         /// <param name="appRequest">Contains the necessary information for registering an application.</param>
         [HttpPost]        
-        public RegisterApplicationResult RegisterApplication([FromBody]RegisterApplicationRequest appRequest)
+        public async Task<RegisterApplicationResult> RegisterApplication([FromBody]RegisterApplicationRequest appRequest)
         {
             try
             {
-                var _ = _dataHandler.RegisterApplication(appRequest);
+                var _ = await _dataHandler.RegisterApplicationAsync(appRequest, HttpContext.RequestAborted)
+                    .ConfigureAwait(false);
             }
             catch (Exception ex)
             {
