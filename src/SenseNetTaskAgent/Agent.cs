@@ -1,5 +1,8 @@
-using System.Reflection;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using SenseNet.Diagnostics;
+using SenseNet.TaskManagement.Core;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,24 +11,14 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using SenseNet.Diagnostics;
-using SenseNet.TaskManagement.Core;
-using SenseNetTaskAgent;
 
 namespace SenseNet.TaskManagement.TaskAgent
 {
     internal class Agent
     {
-        //UNDONE: cleanup and refactor
-
         internal static string AgentName { get; private set; } = Guid.NewGuid().ToString();
         private static readonly object WorkingSync = new object();
         private static bool _working;
-        private static bool _updateStarted;
-        private static bool _updateWinner;
-
         private static SnTask _currentTask;
         internal static Dictionary<string, string> TaskExecutors { get; private set; }
         private static string[] _capabilities;
@@ -33,39 +26,9 @@ namespace SenseNet.TaskManagement.TaskAgent
 
         private static HubConnection _hubConnection;
 
-        private static Dictionary<string, string> _executorVersions;
-        private static Dictionary<string, string> TaskExecutorVersions
-        {
-            get
-            {
-                if (_executorVersions == null)
-                {
-                    var versions = new Dictionary<string, string>();
-
-                    foreach (var executor in TaskExecutors)
-                    {
-                        try
-                        {
-                            // load the executor's assembly name and get the version
-                            var an = AssemblyName.GetAssemblyName(executor.Value);
-
-                            versions.Add(executor.Key, an.Version.ToString());
-                        }
-                        catch
-                        {
-                            // error loading an executor, simply leave it out
-                        }
-                    }
-
-                    _executorVersions = versions;
-                }
-
-                return _executorVersions;
-            }
-        }
-
         private  static AgentConfiguration AgentConfig { get; } = new AgentConfiguration();
 
+        // ReSharper disable once UnusedParameter.Local
         static async Task Main(string[] args)
         {
             IConfiguration config = new ConfigurationBuilder()
@@ -90,24 +53,10 @@ namespace SenseNet.TaskManagement.TaskAgent
                 _watchExecutorTimer = new Timer(WatchExecutorTimerElapsed);
 
                 var started = await StartSignalR();
-
-                // check for updates before any other operation
-                if (started && IsUpdateAvailable())
-                {
-                    StartUpdaterAndExit();
-
-                    // exit only if the update really started (it is possible that there
-                    // will be no update because the updater tool is missing)
-                    if (_updateStarted)
-                        return;
-                }
-
+                
                 _heartBeatTimerPeriodInMilliseconds = AgentConfig.HeartbeatPeriodInSeconds * 1000;
                 _heartbeatTimer = new Timer(HeartBeatTimerElapsed, null, _heartBeatTimerPeriodInMilliseconds, _heartBeatTimerPeriodInMilliseconds);
-
-                // TODO: update mechanism
-                //_updateTimer = new Timer(UpdateTimerElapsed, null, 500, 30000);
-
+                
 #pragma warning disable 4014
                 // start processing on a background thread
                 if (started)
@@ -121,8 +70,11 @@ namespace SenseNet.TaskManagement.TaskAgent
             }
             catch (Exception ex)
             {
-                SnLog.WriteException(ex, String.Empty, EventId.TaskManagement.General);
+                SnLog.WriteException(ex, string.Empty, EventId.TaskManagement.General);
             }
+
+            _heartbeatTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+            _heartbeatTimer?.Dispose();
         }
 
         private static void DiscoverCapabilities()
@@ -284,7 +236,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         {
             lock (WorkingSync)
             {
-                if (_working || _updateStarted)
+                if (_working)
                     return;
                 _working = true;
             }
@@ -304,11 +256,7 @@ namespace SenseNet.TaskManagement.TaskAgent
                     
                     // this will call the finalizers on the server side and delete the task from the database
                     await SendResultAndDeleteTask(result);
-
-                    // if an update process started in the meantime, do not get a new task
-                    if (_updateStarted)
-                        return;
-
+                    
                     // after finishing the previous one, try to get the next task
                     t = await GetTask();
                 }
@@ -361,12 +309,12 @@ namespace SenseNet.TaskManagement.TaskAgent
             }
             Console.WriteLine("Execution finished.");
 
-            result.ResultData = resultData;
-            if (result.Error == null && resultError != null)
-                result.Error = SnTaskError.Parse(resultError);
+            result.ResultData = _resultData;
+            if (result.Error == null && _resultError != null)
+                result.Error = SnTaskError.Parse(_resultError);
 
-            resultData = null;
-            resultError = null;
+            _resultData = null;
+            _resultError = null;
 
             return result;
         }
@@ -417,26 +365,26 @@ namespace SenseNet.TaskManagement.TaskAgent
         }
         private static void WatchExecutorTimerElapsed(object o)
         {
-            if (DateTime.UtcNow.AddMilliseconds(-(AgentConfig.ExecutorTimeoutInSeconds * 1000)) > executionStateWritten)
+            if (DateTime.UtcNow.AddMilliseconds(-(AgentConfig.ExecutorTimeoutInSeconds * 1000)) > _executionStateWritten)
             {
                 var msg = string.Format( "EXECUTOR TERMINATED: {0}.", _executor.Task.Type);
                 Console.WriteLine(msg);
-                resultError = SnTaskError.Create("ExecutorTerminated", "ExecutorTerminated", msg, null).ToString();
+                _resultError = SnTaskError.Create("ExecutorTerminated", "ExecutorTerminated", msg, null).ToString();
                 
                 if (_executor != null)
                     _executor.Terminate();
             }
         }
-        private static IExecutor _executor = null;
-        private static string progressMessage = null;
-        private static string resultData = null;
-        private static string resultError = null;
-        private static DateTime executionStateWritten = DateTime.MinValue;
+        private static IExecutor _executor;
+        private static string _progressMessage;
+        private static string _resultData;
+        private static string _resultError;
+        private static DateTime _executionStateWritten = DateTime.MinValue;
         internal static void ExecutionStart(IExecutor executor)
         {
             _executor = executor;
-            progressMessage = null;
-            executionStateWritten = DateTime.UtcNow;
+            _progressMessage = null;
+            _executionStateWritten = DateTime.UtcNow;
 
             StartWatcherTimer();
         }
@@ -445,8 +393,8 @@ namespace SenseNet.TaskManagement.TaskAgent
             StopWatcherTimer();
 
             _executor = null;
-            progressMessage = null;
-            executionStateWritten = DateTime.MinValue;
+            _progressMessage = null;
+            _executionStateWritten = DateTime.MinValue;
         }
         internal static void OutputDataReceived(object sender, DataReceivedEventArgs e)
         {
@@ -454,11 +402,11 @@ namespace SenseNet.TaskManagement.TaskAgent
             {
                 // It does not matter what the executor wrote on the console, it means it is alive.
                 // This 'resets' the timer we employ for monitoring executors for programmatic timeout.
-                executionStateWritten = DateTime.UtcNow;
+                _executionStateWritten = DateTime.UtcNow;
 
                 if (e.Data.StartsWith("Progress:", StringComparison.OrdinalIgnoreCase))
                 {
-                    SnTrace.TaskManagement.Write("############ Progress received {0}: {1}", AgentName, progressMessage);                    
+                    SnTrace.TaskManagement.Write("############ Progress received {0}: {1}", AgentName, _progressMessage);                    
 
                     var progressRecord = GetProgressRecord(e.Data.Substring(9).Trim());
                     if (progressRecord != null)
@@ -481,27 +429,27 @@ namespace SenseNet.TaskManagement.TaskAgent
                 }
                 else if (e.Data.StartsWith("ResultData:", StringComparison.OrdinalIgnoreCase))
                 {
-                    resultData = e.Data.Substring(11).Trim();
+                    _resultData = e.Data.Substring(11).Trim();
                 }
                 else if (e.Data.StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase))
                 {
-                    resultError = e.Data.Substring(6);
+                    _resultError = e.Data.Substring(6);
                 }
                 else if (e.Data.StartsWith("WARNING:", StringComparison.OrdinalIgnoreCase))
                 {
                     SnLog.WriteWarning(e.Data.Substring(8), EventId.TaskManagement.General);
                 }
-                else if (resultError != null)
+                else if (_resultError != null)
                 {
-                    resultError += e.Data;
+                    _resultError += e.Data;
                 }
                 Console.WriteLine(e.Data);
             }
         }
 
         // heartbeat support
-        static PerformanceCounter cpuCounter = new PerformanceCounter() { CategoryName = "Processor", CounterName = "% Processor Time", InstanceName = "_Total" };
-        static PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available MBytes");
+        static readonly PerformanceCounter CpuCounter = new PerformanceCounter() { CategoryName = "Processor", CounterName = "% Processor Time", InstanceName = "_Total" };
+        static readonly PerformanceCounter RamCounter = new PerformanceCounter("Memory", "Available MBytes");
         private static Timer _heartbeatTimer;
         private static int _heartBeatTimerPeriodInMilliseconds;
         private static void HeartBeatTimerElapsed(object o)
@@ -532,13 +480,12 @@ namespace SenseNet.TaskManagement.TaskAgent
                 Agent = AgentName,
                 EventTime = DateTime.Now,
                 ProcessId = p.Id,
-                CPU = cpuCounter.NextValue(),
-                RAM = Convert.ToInt32(Math.Round(ramCounter.NextValue())),
+                CPU = CpuCounter.NextValue(),
+                RAM = Convert.ToInt32(Math.Round(RamCounter.NextValue())),
                 TotalRAM = GetTotalPhysicalMemory(),
                 StartTime = p.StartTime.ToUniversalTime(),
                 EventType = TaskEventType.Progress //TaskEventType.Idle
             };
-
         }
         private static SnProgressRecord GetProgressRecord(string progressMsg)
         {
@@ -549,7 +496,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             }
             catch
             {
-                // If deserializetion went wrong (e.g. because the executer wrote something with a 'Progress' prefix
+                // If deserialization went wrong (e.g. because the executor wrote something with a 'Progress' prefix
                 // to the console that is not a Progress object), we cannot return anything but null here.
                 return null;
             }
@@ -562,196 +509,6 @@ namespace SenseNet.TaskManagement.TaskAgent
                 Progress = progress
             };
         }
-
-        // Task Management update
-        //private static Timer _updateTimer;
-        private static void UpdateTimerElapsed(object o)
-        {
-            // just to make sure we do not execute something twice, this may never be true here
-            if (_updateStarted)
-            {
-                StopUpdateTimer();
-                return;
-            }
-
-            if (!IsUpdateAvailable())
-                return;
-
-            // if an update started in the meantime
-            if (_updateStarted)
-            {
-                StopUpdateTimer();
-                return;
-            }            
-
-            // stop timer to avoid executing this again
-            StopUpdateTimer();
-
-            StartUpdaterAndExit();
-        }
-        private static void StopUpdateTimer()
-        {
-            //_updateTimer.Change(Timeout.Infinite, Timeout.Infinite);
-        }
-
-        private static bool IsUpdateAvailable()
-        {
-            // TODO: update mechanism
-            return false;
-        }
-
-        private static void StartUpdaterAndExit()
-        {
-            // this switch is monitored by the WorkAsync method because it 
-            // must not ask for a new task if an update has started
-            _updateStarted = true;
-
-            SnLog.WriteInformation($"Task#Starting update process on agent {AgentName}.", EventId.TaskManagement.General);
-
-            var updaterToolName = AgentManager.UPDATER_PROCESSNAME + ".exe";
-            var updaterToolPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), updaterToolName);
-            var updaterAlreadyRunning = false;
-
-            // the tool should be next to the agent executable
-            if (File.Exists(updaterToolPath))
-            {
-                var startInfo = new ProcessStartInfo(updaterToolName)
-                {
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    ErrorDialog = false,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                };
-
-                var updaterProcess = new Process
-                {
-                    EnableRaisingEvents = true,
-                    StartInfo = startInfo
-                };
-
-                // listen to what the updater tool writes to the Console
-                updaterProcess.OutputDataReceived += delegate(object sender, DataReceivedEventArgs args)
-                {
-                    if (args == null || args.Data == null)
-                        return;
-
-                    // the updater notified us that he won
-                    if (string.CompareOrdinal(args.Data, "WINNER") == 0)
-                        _updateWinner = true;
-                };
-
-                try
-                {
-                    updaterProcess.Start();
-                    updaterProcess.BeginOutputReadLine();
-
-                    SnLog.WriteInformation($"Task#Updater tool STARTED on agent {Agent.AgentName}",
-                        EventId.TaskManagement.General);
-
-                    // Wait while the updater process exits (because another updater is already running) 
-                    // or it notifies us that he is the winner and will do the actual update soon.
-                    do
-                    {
-                        updaterProcess.WaitForExit(1000);
-                    } while (!updaterProcess.HasExited && !_updateWinner);
-
-                    if (updaterProcess.HasExited)
-                    {
-                        if (updaterProcess.ExitCode == AgentManager.UPDATER_STATUSCODE_STARTED)
-                        {
-                            updaterAlreadyRunning = true;
-
-                            // another agent already started the updater tool, simply exit
-                            SnLog.WriteInformation($"Task#Updater tool EXITED on agent {AgentName} because another updater is already running.",
-                                EventId.TaskManagement.General);
-                        }
-                        else
-                        {
-                            // unknown error code
-                            SnLog.WriteWarning($"Task#Updater tool EXITED on agent {AgentName} with an unexpected code: {updaterProcess.ExitCode}.",
-                                EventId.TaskManagement.General);
-                        }
-                    }
-                    else if (_updateWinner)
-                    {
-                        // Download the package only if we started the one 
-                        // and only true updater exe - that has not exited.
-                        DownloadUpdatePackage();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    SnLog.WriteException(ex, "Agent update error.", EventId.TaskManagement.General);
-                }
-            }
-            else
-            {
-                // the updater tool is missing
-                SnLog.WriteError(string.Format("Task#Updater tool not found ({0}), but there is a new version on the server. Please update the TaskManagement folder manually.", updaterToolPath),
-                    EventId.TaskManagement.General);
-
-                // no update will be performed: switch back to working mode
-                _updateStarted = false;
-
-                // do not exit if there is no updater: the operator must handle 
-                // this use-case manually (stop the service and copy the files)
-                return;
-            }
-
-            // wait for the last task executor to finish
-            while (_working)
-            {
-                Thread.Sleep(1000);
-            }
-
-            SnLog.WriteInformation(string.Format(updaterAlreadyRunning
-                    ? "Task#Agent {0} exits before updating."
-                    : "Task#Agent {0} exits before updating. This is Ripley, last survivor of the Nostromo, signing off.", AgentName), EventId.TaskManagement.General);
-
-            // shut down this agent
-            Environment.Exit(0);
-        }
-
-        //UNDONE remove the obsolete update feature
-        private static void DownloadUpdatePackage()
-        {
-            SnLog.WriteInformation($"Task#Starting to download update package on agent {Agent.AgentName}.",
-                EventId.TaskManagement.General);
-
-            try
-            {
-                using (var client = new WebClient())
-                {
-                    var packageUrl = AgentConfig.TaskManagementUrl.TrimEnd('/') + AgentManager.UPDATER_PACKAGEPATH;
-                    var folder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-                    var targetFilePath = Path.Combine(folder, AgentManager.UPDATER_PACKAGENAME);
-
-                    //// set NTLM credentials (for Windows auth) or Authorization header (for basic auth)
-                    //if (string.IsNullOrEmpty(Configuration.Username))
-                    //    client.Credentials = CredentialCache.DefaultCredentials;
-                    //else
-                    //    client.Headers.Add("Authorization", Configuration.GetBasicAuthHeader(new UserCredentials
-                    //    {
-                    //        UserName = Configuration.Username,
-                    //        Password = Configuration.Password
-                    //    }));
-
-                    // save the file to the local TaskManagement folder with the same name as the content
-                    client.DownloadFile(packageUrl, targetFilePath);
-                }
-
-                SnLog.WriteInformation($"Task#Download update package FINISHED on agent {Agent.AgentName}.",
-                    EventId.TaskManagement.General);
-            }
-            catch (Exception ex)
-            {
-                SnLog.WriteException(ex, "Agent update error.", EventId.TaskManagement.General);
-            }
-        }
-
         private static ulong GetTotalPhysicalMemory()
         {
             //UNDONE: get physical memory (no official .Net Core solution yet)
@@ -759,8 +516,8 @@ namespace SenseNet.TaskManagement.TaskAgent
             return 0;
         }
 
-
-        internal static async Task InvokeProxyAsync(string method, params object[] args)
+        // hub proxy support
+        private static async Task InvokeProxyAsync(string method, params object[] args)
         {
             try
             {
