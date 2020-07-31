@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web;
 using Microsoft.AspNetCore.SignalR;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
-using SenseNet.TaskManagement.Web;
 
+// ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Hubs
 {
     public static class TaskMonitorHubExtensions
