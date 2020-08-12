@@ -5,6 +5,7 @@
     <LangVersion>latest</LangVersion>
     <RootNamespace>SenseNet.TaskManagement.Web</RootNamespace>
     <AssemblyName>SenseNet.TaskManagement.Web</AssemblyName>
+    <UserSecretsId>44518485-d2eb-409c-8601-342e3fd0e746</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
