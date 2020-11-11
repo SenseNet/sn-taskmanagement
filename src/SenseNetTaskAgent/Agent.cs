@@ -447,9 +447,6 @@ namespace SenseNet.TaskManagement.TaskAgent
             }
         }
 
-        // heartbeat support
-        static readonly PerformanceCounter CpuCounter = new PerformanceCounter() { CategoryName = "Processor", CounterName = "% Processor Time", InstanceName = "_Total" };
-        static readonly PerformanceCounter RamCounter = new PerformanceCounter("Memory", "Available MBytes");
         private static Timer _heartbeatTimer;
         private static int _heartBeatTimerPeriodInMilliseconds;
         private static void HeartBeatTimerElapsed(object o)
@@ -480,8 +477,8 @@ namespace SenseNet.TaskManagement.TaskAgent
                 Agent = AgentName,
                 EventTime = DateTime.Now,
                 ProcessId = p.Id,
-                CPU = CpuCounter.NextValue(),
-                RAM = Convert.ToInt32(Math.Round(RamCounter.NextValue())),
+                CPU = 0,
+                RAM = 0,
                 TotalRAM = GetTotalPhysicalMemory(),
                 StartTime = p.StartTime.ToUniversalTime(),
                 EventType = TaskEventType.Progress //TaskEventType.Idle
