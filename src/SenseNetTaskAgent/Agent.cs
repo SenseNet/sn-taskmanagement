@@ -33,6 +33,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         {
             IConfiguration config = new ConfigurationBuilder()
                 .AddJsonFile("appsettings.json", true, true)
+                .AddEnvironmentVariables()
                 .Build();
             
             config.GetSection("TaskManagement").Bind(AgentConfig);
