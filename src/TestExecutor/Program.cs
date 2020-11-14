@@ -11,10 +11,10 @@ namespace TestExecutor
     {
         static void Main(string[] args)
         {
-            var config = ParseParameters(args);
-
             Console.WriteLine("Test executor is running...");
             Thread.Sleep(5000);
+
+            var config = ParseParameters(args);
 
             var subtask = new SnSubtask("Thinking hard", "Pretending to do something.");
             subtask.Start();
