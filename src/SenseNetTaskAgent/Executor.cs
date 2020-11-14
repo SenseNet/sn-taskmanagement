@@ -84,7 +84,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         private int ExecuteInner(SnTask task)
         {
             var workerExe = GetWorkerExePath(task);
-            if (string.IsNullOrEmpty(workerExe) || !File.Exists(workerExe))
+            if (!AgentTools.ExecutorExists(workerExe))
                 throw new TaskManagementException("Task executor command was not found", task.AppId, task.Id, task.Type);
 
             var app = _config.Applications.FirstOrDefault(a =>
