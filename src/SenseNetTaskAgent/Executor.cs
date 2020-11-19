@@ -84,7 +84,7 @@ namespace SenseNet.TaskManagement.TaskAgent
         private int ExecuteInner(SnTask task)
         {
             var workerExe = GetWorkerExePath(task);
-            if (string.IsNullOrEmpty(workerExe) || !File.Exists(workerExe))
+            if (!AgentTools.ExecutorExists(workerExe))
                 throw new TaskManagementException("Task executor command was not found", task.AppId, task.Id, task.Type);
 
             var app = _config.Applications.FirstOrDefault(a =>
@@ -93,11 +93,10 @@ namespace SenseNet.TaskManagement.TaskAgent
             var userParameter = "USERNAME:\"" + (task.AppId ?? string.Empty) + "\"";
             var passwordParameter = "PASSWORD:\"" + (app?.Secret ?? string.Empty) + "\"";
             var dataParameter = "DATA:\"" + EscapeArgument(task.TaskData) + "\"";
+            
+            //if RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 
-            var parameters = new List<string> { userParameter, passwordParameter, dataParameter };
-            var processArgs = string.Join(" ", parameters);
-
-            var startInfo = new ProcessStartInfo(workerExe, processArgs)
+            var startInfo = new ProcessStartInfo(workerExe)
             {
                 UseShellExecute = false,
                 WorkingDirectory = Path.GetDirectoryName(workerExe),
@@ -108,6 +107,10 @@ namespace SenseNet.TaskManagement.TaskAgent
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
             };
+
+            startInfo.ArgumentList.Add(userParameter);
+            startInfo.ArgumentList.Add(passwordParameter);
+            startInfo.ArgumentList.Add(dataParameter);
 
             _process = new Process
             {

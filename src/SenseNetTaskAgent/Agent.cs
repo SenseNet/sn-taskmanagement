@@ -91,12 +91,13 @@ namespace SenseNet.TaskManagement.TaskAgent
                 foreach (var executorDirectory in Directory.GetDirectories(AgentConfig.TaskExecutorDirectory))
                 {
                     var dirName = Path.GetFileName(executorDirectory);
-                    var exeName = GetExecutorExeName(dirName);
+                    var appName = GetExecutorAppName(dirName);
                     if (executors.ContainsKey(dirName))
                         continue;
-                    var exe = Path.Combine(executorDirectory, exeName + ".exe");
-                    if (File.Exists(exe))
-                        executors.Add(dirName, exe);
+                    var appPath = Path.Combine(executorDirectory, appName);
+                    
+                    if (AgentTools.ExecutorExists(appPath))
+                        executors.Add(dirName, appPath);
                 }
             }
 
@@ -105,7 +106,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             _capabilities = executors.Keys.ToArray();
             TaskExecutors = executors;
         }
-        private static string GetExecutorExeName(string name)
+        private static string GetExecutorAppName(string name)
         {
             return Core.Tools.GetExecutorExeName(name);
         }
