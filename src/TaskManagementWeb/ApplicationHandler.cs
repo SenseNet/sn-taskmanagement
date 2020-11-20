@@ -7,10 +7,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using SenseNet.Client.Authentication;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
+using SNaaS.Client.Security;
 
 // ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Web
@@ -41,13 +41,13 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
-        private readonly TokenStore _tokenStore;
         private readonly TaskDataHandler _dataHandler;
+        private readonly ISecretStore _secretStore;
 
-        public ApplicationHandler(TokenStore tokenStore, TaskDataHandler dataHandler)
+        public ApplicationHandler(TaskDataHandler dataHandler, ISecretStore secretStore)
         {
-            _tokenStore = tokenStore;
             _dataHandler = dataHandler;
+            _secretStore = secretStore;
         }
 
         /// <summary>
@@ -173,19 +173,12 @@ namespace SenseNet.TaskManagement.Web
 
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            //UNDONE: IsTrusted only in dev environment
-            var server = new Client.ServerContext
-            {
-                Url = appUrl,
-                IsTrusted = true,
-            };
             
-            //UNDONE: get app-specific secret from configuration
-            var accessToken = await _tokenStore.GetTokenAsync(server, "secret").ConfigureAwait(false);
+            var server = await _secretStore.GetServerContextAsync(appUrl).ConfigureAwait(false);
 
             // add auth header
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", 
+                server.Authentication.AccessToken);
 
             return client;
         }

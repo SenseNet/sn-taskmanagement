@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SenseNet.Diagnostics;
 using SenseNet.Extensions.DependencyInjection;
+using SNaaS.Extensions.DependencyInjection;
 using EventId = SenseNet.Diagnostics.EventId;
 
 namespace SenseNet.TaskManagement.Web
@@ -30,6 +31,7 @@ namespace SenseNet.TaskManagement.Web
             SnTrace.EnableAll();
 
             services.Configure<TaskManagementConfiguration>(Configuration.GetSection("TaskManagement"));
+            services.ConfigureSnaasOptions(Configuration);
             
             //TODO: inject allowed origins dynamically (do not allow everything)
             services.AddCors(c =>
@@ -43,7 +45,7 @@ namespace SenseNet.TaskManagement.Web
             });
 
             services.AddSingleton<TaskDataHandler>();
-            services.AddSenseNetClientTokenStore();
+            services.AddSnaasSecretStore();
             services.AddSingleton<ApplicationHandler>();
             services.AddHostedService<DeadTaskHostedService>();
         }
