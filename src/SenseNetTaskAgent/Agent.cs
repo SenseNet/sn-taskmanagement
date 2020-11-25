@@ -85,7 +85,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             //TODO: explicit executors feature has been removed temporarily
             //foreach(var item in AgentConfig.Executors)
             //    executors.Add(item.Key, item.Value);
-
+            
             if (Directory.Exists(AgentConfig.TaskExecutorDirectory))
             {
                 foreach (var executorDirectory in Directory.GetDirectories(AgentConfig.TaskExecutorDirectory))
@@ -99,6 +99,12 @@ namespace SenseNet.TaskManagement.TaskAgent
                     if (AgentTools.ExecutorExists(appPath))
                         executors.Add(dirName, appPath);
                 }
+            }
+
+            if (!executors.Any())
+            {
+                SnTrace.TaskManagement.Write(
+                    $"Agent {AgentName}: NO EXECUTORS found in {AgentConfig.TaskExecutorDirectory}. Current dir: {Environment.CurrentDirectory}");
             }
 
             foreach (var item in executors)
