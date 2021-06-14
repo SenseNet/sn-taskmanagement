@@ -15,7 +15,7 @@ namespace SenseNet.TaskManagement.Core
     /// </summary>
     public static class RepositoryClient
     {
-        private static class Error
+        internal static class Error
         {
             internal static readonly string REGISTERTASK = "Register task request failed. ";
             internal static readonly string REGISTERTASK_MISSING_URL = "Task management url is missing.";
@@ -26,8 +26,8 @@ namespace SenseNet.TaskManagement.Core
             internal static readonly string REGISTERAPP_MISSING_APPID = "Please fill the app id.";
         }
 
-        private static readonly string APIURL_REGISTERAPP = "api/task/registerapplication";
-        private static readonly string APIURL_REGISTERTASK = "api/task/registertask";
+        internal static readonly string APIURL_REGISTERAPP = "api/task/registerapplication";
+        internal static readonly string APIURL_REGISTERTASK = "api/task/registertask";
 
         /// <summary>
         /// Registers a task through the task management REST API as an asynchronous operation.
@@ -62,6 +62,8 @@ namespace SenseNet.TaskManagement.Core
                     var result = JsonConvert.DeserializeObject<RegisterTaskResult>(responseText);
                     if (!string.IsNullOrEmpty(result?.Error))
                         throw new TaskManagementException(result.Error, requestData.AppId, null);
+
+                    return result;
                 }
                 else
                 {
