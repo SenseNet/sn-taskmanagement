@@ -52,6 +52,10 @@ namespace SenseNet.TaskManagement.Web
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationHandler appHandler)
         {
+            // This will set the global SnLog and SnTrace instances to route log messages to the
+            // official .Net Core ILogger API.
+            app.ApplicationServices.AddSenseNetILogger();
+
             SnLog.WriteInformation("Starting TaskManagement.Web", EventId.TaskManagement.Lifecycle);
 
             // make Web API use the standard ASP.NET error configuration

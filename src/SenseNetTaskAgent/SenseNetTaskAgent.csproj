@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Version>1.2.5</Version>
+    <Version>1.2.5.1</Version>
     <Authors>kavics,tusmester</Authors>
     <Company>Sense/Net Inc.</Company>
     <Copyright>Copyright © Sense/Net Inc.</Copyright>
@@ -20,24 +20,43 @@
     <Description>sensenet TaskManagement agent tool.</Description>
     <LangVersion>latest</LangVersion>
     <RootNamespace>SenseNet.TaskManagement.TaskAgent</RootNamespace>
+    <UserSecretsId>af3a1e3d-c0d2-40a9-b90e-fadb20d4a81c</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.10" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.10" />
+    <None Remove="appsettings.Development.json" />
+    <None Remove="appsettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.Development.json" />
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Content Update="appsettings.Development.json">
+      <DependentUpon>appsettings.json</DependentUpon>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="3.1.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.16" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.16" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="3.1.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+    <PackageReference Include="Serilog.Sinks.File" Version="4.1.0" />
+    <PackageReference Include="Serilog.Sinks.Graylog" Version="2.2.2" />
     <PackageReference Include="SenseNet.Tools" Version="3.2.5" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\TaskManagement.Core\SenseNet.TaskManagement.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="appSettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

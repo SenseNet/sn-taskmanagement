@@ -11,6 +11,10 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using SenseNet.Extensions.DependencyInjection;
+using Serilog;
 
 namespace SenseNet.TaskManagement.TaskAgent
 {
@@ -31,16 +35,15 @@ namespace SenseNet.TaskManagement.TaskAgent
         // ReSharper disable once UnusedParameter.Local
         static async Task Main(string[] args)
         {
-            IConfiguration config = new ConfigurationBuilder()
-                .AddJsonFile("appsettings.json", true, true)
-                .AddEnvironmentVariables()
-                .Build();
-            
-            config.GetSection("TaskManagement").Bind(AgentConfig);
+            var host = CreateHostBuilder(args).Build();
+            var config = host.Services.GetService<IConfiguration>();
+            var env = host.Services.GetService<IHostEnvironment>();
 
-            SnLog.Instance = new SnFileSystemEventLogger();
-            SnTrace.SnTracers.Add(new SnFileSystemTracer());
+            config.GetSection("TaskManagement").Bind(AgentConfig);
+            host.Services.AddSenseNetILogger();
+            
             SnTrace.EnableAll();
+            SnTrace.System.Write($"Hosting environment: {env.EnvironmentName}");
 
             AgentName = AgentManager.GetAgentName();
 
@@ -77,6 +80,16 @@ namespace SenseNet.TaskManagement.TaskAgent
             _heartbeatTimer?.Change(Timeout.Infinite, Timeout.Infinite);
             _heartbeatTimer?.Dispose();
         }
+
+        static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .ConfigureServices((hb, services) => services
+                    .AddLogging(logging =>
+                    {
+                        logging.AddSerilog(new LoggerConfiguration()
+                            .ReadFrom.Configuration(hb.Configuration)
+                            .CreateLogger());
+                    }));
 
         private static void DiscoverCapabilities()
         {

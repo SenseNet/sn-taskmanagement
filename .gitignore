@@ -251,3 +251,4 @@ paket-files/
 .idea/
 *.sln.iml
 /src/TaskManagementWeb/TaskManagement
+/src/TaskManagementWeb/App_Data
