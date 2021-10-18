@@ -37,6 +37,13 @@ namespace SenseNet.TaskManagement.Hubs
             _monitorHub = monitorHub;
             _applicationHandler = appHandler;
             _dataHandler = dataHandler;
+
+            if (_monitorHub == null)
+                SnTrace.TaskManagement.WriteError($"AgentHub MonitorHub is null.");
+            if (_applicationHandler == null)
+                SnTrace.TaskManagement.WriteError($"AgentHub ApplicationHandler is null.");
+            if (_dataHandler == null)
+                SnTrace.TaskManagement.WriteError($"AgentHub DataHandler is null.");
         }
 
         //===================================================================== Properties
@@ -97,9 +104,16 @@ namespace SenseNet.TaskManagement.Hubs
 
         public async Task TaskFinished(SnTaskResult taskResult)
         {
-            SnTrace.TaskManagement.Write("AgentHub TaskFinished called. Agent: {0} / {1}, taskId: {2}, code: {3}, error: {4}",
-                       taskResult.MachineName, taskResult.AgentName, taskResult.Task.Id, taskResult.ResultCode,
-                       taskResult.Error == null ? "" : taskResult.Error.Message);
+            SnTrace.TaskManagement.Write("AgentHub TaskFinished called. Agent: {0} / {1}, taskId: #{2}, code: {3}, error: {4}",
+                       taskResult.MachineName, taskResult.AgentName, taskResult.Task?.Id, taskResult.ResultCode,
+                       taskResult.Error == null ? "-" : taskResult.Error.Message);
+
+            if (taskResult.Task == null)
+            {
+                SnTrace.TaskManagement.WriteError("Task not found.");
+                return;
+            }
+
             try
             {
                 if (string.IsNullOrEmpty(taskResult.Task.AppId))
@@ -110,10 +124,19 @@ namespace SenseNet.TaskManagement.Hubs
                 }
 
                 var app = _applicationHandler.GetApplication(taskResult.Task.AppId);
-                var doesApplicationNeedNotification = !string.IsNullOrWhiteSpace(taskResult.Task.GetFinalizeUrl(app));
+                if (app == null)
+                    SnTrace.TaskManagement.Write($"App not found with id {taskResult.Task.AppId} for taskId #{taskResult.Task.Id}");
+
+                var finalizeUrl = taskResult.Task.GetFinalizeUrl(app);
+                var doesApplicationNeedNotification = !string.IsNullOrWhiteSpace(finalizeUrl);
+
+                SnTrace.TaskManagement.Write(!doesApplicationNeedNotification
+                    ? $"AgentHub Finalize url is empty for task #{taskResult.Task.Id}"
+                    : $"AgentHub Finalizing task #{taskResult.Task.Id}");
 
                 // first we make sure that the app is accessible by sending a ping request
-                if (doesApplicationNeedNotification && !(await _applicationHandler.SendPingRequestAsync(taskResult.Task.AppId, Context.ConnectionAborted)
+                if (doesApplicationNeedNotification && !(await _applicationHandler.SendPingRequestAsync(taskResult.Task.AppId, 
+                        Context?.ConnectionAborted ?? CancellationToken.None)
                         .ConfigureAwait(false)))
                 {
                     SnLog.WriteError($"Ping request to application {taskResult.Task.AppId} " +
@@ -127,12 +150,16 @@ namespace SenseNet.TaskManagement.Hubs
                 }
 
                 // remove the task from the database first
-                await _dataHandler.FinalizeTaskAsync(taskResult, Context.ConnectionAborted).ConfigureAwait(false);
+                await _dataHandler.FinalizeTaskAsync(taskResult, 
+                    Context?.ConnectionAborted ?? CancellationToken.None).ConfigureAwait(false);
 
                 SnTrace.TaskManagement.Write("AgentHub TaskFinished: task {0} has been deleted.", taskResult.Task.Id);
 
                 if (doesApplicationNeedNotification)
                 {
+                    SnTrace.TaskManagement.Write($"AgentHub TaskFinished: sending finalize notification for task #{taskResult.Task.Id} " +
+                                                 $"to {finalizeUrl}.");
+
                     // This method does not need to be awaited, because we do not want to do anything 
                     // with the result, only notify the app that the task has been finished.
 #pragma warning disable 4014
