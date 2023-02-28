@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -90,10 +89,11 @@ namespace SenseNet.TaskManagement.TaskAgent
             var app = _config.Applications.FirstOrDefault(a =>
                 string.Equals(a.AppId, task.AppId, StringComparison.OrdinalIgnoreCase));
 
-            var userParameter = "USERNAME:\"" + (task.AppId ?? string.Empty) + "\"";
+            var userParameter = "USERNAME:\"" + (app?.ClientId ?? (task.AppId ?? string.Empty)) + "\"";
             var passwordParameter = "PASSWORD:\"" + (app?.Secret ?? string.Empty) + "\"";
             var dataParameter = "DATA:\"" + EscapeArgument(task.TaskData) + "\"";
-            
+            var apiKeyParameter = "APIKEY:\"" + (app?.ApiKey ?? string.Empty) + "\"";
+
             //if RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 
             var startInfo = new ProcessStartInfo(workerExe)
@@ -111,6 +111,7 @@ namespace SenseNet.TaskManagement.TaskAgent
             startInfo.ArgumentList.Add(userParameter);
             startInfo.ArgumentList.Add(passwordParameter);
             startInfo.ArgumentList.Add(dataParameter);
+            startInfo.ArgumentList.Add(apiKeyParameter);
 
             _process = new Process
             {
@@ -120,8 +121,12 @@ namespace SenseNet.TaskManagement.TaskAgent
             _process.OutputDataReceived += Process_OutputDataReceived;
 
             SnLog.WriteInformation(string.Format(
-                "Task#{1} execution STARTED on agent {0}:\r\n    id: {1},\r\n    type: {2},\r\n    hash: {3},\r\n    order: {4},\r\n    registered: {5},\r\n    key: {6},\r\n    data: {7}"
-                , Agent.AgentName, task.Id, task.Type, task.Hash, task.Order, task.RegisteredAt, task.TaskKey, task.TaskData), EventId.TaskManagement.Lifecycle);
+                "Task#{1} execution STARTED on agent {0}:\r\n    id: {1},\r\n    type: {2},\r\n    " +
+                "hash: {3},\r\n    order: {4},\r\n    registered: {5},\r\n    key: {6},\r\n    data: {7},\r\n    " +
+                "appid: {8},\r\n    ClientId: {9}"
+                , Agent.AgentName, task.Id, task.Type, task.Hash, task.Order, task.RegisteredAt, task.TaskKey,
+                task.TaskData, app?.AppId, app?.ClientId), 
+                EventId.TaskManagement.Lifecycle);
 
             _process.Start();
             _process.BeginOutputReadLine();

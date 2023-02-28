@@ -252,3 +252,5 @@ paket-files/
 *.sln.iml
 /src/TaskManagementWeb/TaskManagement
 /src/TaskManagementWeb/App_Data
+/src/SenseNetTaskAgent/App_Data/Logs
+/src/SenseNetTaskAgent/TaskExecutors
