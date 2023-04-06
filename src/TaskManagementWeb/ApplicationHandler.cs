@@ -41,10 +41,10 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
-        private readonly TokenStore _tokenStore;
+        private readonly ITokenStore _tokenStore;
         private readonly TaskDataHandler _dataHandler;
 
-        public ApplicationHandler(TokenStore tokenStore, TaskDataHandler dataHandler)
+        public ApplicationHandler(ITokenStore tokenStore, TaskDataHandler dataHandler)
         {
             _tokenStore = tokenStore;
             _dataHandler = dataHandler;
@@ -107,7 +107,7 @@ namespace SenseNet.TaskManagement.Web
                                          $"Task: {result.Task.Id}, Type: {result.Task.Type}, " +
                                          $"task success: {result.Successful}");
 
-            using var client = await GetHttpClient(app.ApplicationUrl);
+            using var client = await GetHttpClient(app.ApplicationUrl).ConfigureAwait(false);
 
             // create post data
             var content = new StringContent(JsonConvert.SerializeObject(new {result}), Encoding.UTF8,
@@ -119,7 +119,7 @@ namespace SenseNet.TaskManagement.Web
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var responseText = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var responseText = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 
                     SnLog.WriteWarning($"Error during finalize REST API call. Url: {finalizeUrl}, Status code: {response.StatusCode}. Response: {responseText}",
                         EventId.TaskManagement.General);
@@ -182,7 +182,8 @@ namespace SenseNet.TaskManagement.Web
             };
             
             //UNDONE: get app-specific secret from configuration
-            var accessToken = await _tokenStore.GetTokenAsync(server, "secret").ConfigureAwait(false);
+            var accessToken = await _tokenStore.GetTokenAsync(server, "client", "secret", CancellationToken.None)
+                .ConfigureAwait(false);
 
             // add auth header
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
