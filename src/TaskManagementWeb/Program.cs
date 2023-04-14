@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Serilog;
 
 namespace SenseNet.TaskManagement.Web
@@ -16,12 +15,11 @@ namespace SenseNet.TaskManagement.Web
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<Startup>()
-                        .ConfigureLogging(loggingConfiguration =>
-                            loggingConfiguration.ClearProviders())
-                        .UseSerilog((hostingContext, loggerConfiguration) =>
-                            loggerConfiguration.ReadFrom
-                                .Configuration(hostingContext.Configuration));
+                    webBuilder.UseStartup<Startup>();
+                })
+                .UseSerilog((context, configuration) =>
+                {
+                    configuration.ReadFrom.Configuration(context.Configuration);
                 });
     }
 }

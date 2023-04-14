@@ -13,6 +13,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestExecutor", "TestExecuto
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestMonitorClient", "TestMonitorClient\TestMonitorClient.csproj", "{BE0D85F5-0791-4E15-AD53-D6D3986FB202}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskManagement.Web.Components", "TaskManagement.Web.Components\TaskManagement.Web.Components.csproj", "{D70A1F21-258F-4602-859F-D446838AF32E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,6 +52,12 @@ Global
 		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Diagnostic|Any CPU.Build.0 = Debug|Any CPU
 		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BE0D85F5-0791-4E15-AD53-D6D3986FB202}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D70A1F21-258F-4602-859F-D446838AF32E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D70A1F21-258F-4602-859F-D446838AF32E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D70A1F21-258F-4602-859F-D446838AF32E}.Diagnostic|Any CPU.ActiveCfg = Debug|Any CPU
+		{D70A1F21-258F-4602-859F-D446838AF32E}.Diagnostic|Any CPU.Build.0 = Debug|Any CPU
+		{D70A1F21-258F-4602-859F-D446838AF32E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D70A1F21-258F-4602-859F-D446838AF32E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

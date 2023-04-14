@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TaskManagement.Core\SenseNet.TaskManagement.Core.csproj" />
+    <ProjectReference Include="..\TaskManagement.Web.Components\TaskManagement.Web.Components.csproj" />
   </ItemGroup>
 
   <ItemGroup>
