@@ -7,5 +7,6 @@ namespace SenseNet.TaskManagement.Core
     public interface ISnClientProvider
     {
         Task SetAuthenticationAsync(HttpClient client, string appUrl, CancellationToken cancel);
+        Task<Client.ServerContext> GetServerContextAsync(string appUrl, CancellationToken cancel);
     }
 }

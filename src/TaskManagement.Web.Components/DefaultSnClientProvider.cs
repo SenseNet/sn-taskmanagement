@@ -22,6 +22,24 @@ namespace SenseNet.TaskManagement.Web
 
         public async Task SetAuthenticationAsync(HttpClient client, string appUrl, CancellationToken cancel)
         {
+            var server = await GetServerContextAsync(appUrl, cancel).ConfigureAwait(false);
+
+            // client/secret authentication
+            if (!string.IsNullOrEmpty(server.Authentication.AccessToken))
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", server.Authentication.AccessToken);
+            }
+
+            // api key authentication
+            if (!string.IsNullOrEmpty(server.Authentication.ApiKey))
+            {
+                client.DefaultRequestHeaders.Add("apikey", server.Authentication.ApiKey);
+            }
+        }
+
+        public async Task<Client.ServerContext> GetServerContextAsync(string appUrl, CancellationToken cancel)
+        {
             //TODO: IsTrusted only in dev environment
             var server = new Client.ServerContext
             {
@@ -34,7 +52,7 @@ namespace SenseNet.TaskManagement.Web
             if (repositoryOptions == null)
             {
                 _logger.LogTrace("Warning: no repository configured for app url {appUrl}", appUrl);
-                return;
+                return server;
             }
 
             // client/secret authentication
@@ -42,17 +60,18 @@ namespace SenseNet.TaskManagement.Web
                 !string.IsNullOrEmpty(repositoryOptions.Authentication.ClientSecret))
             {
                 var accessToken = await _tokenStore.GetTokenAsync(server, repositoryOptions.Authentication.ClientId,
-                                       repositoryOptions.Authentication.ClientSecret, cancel).ConfigureAwait(false);
-                // add auth header
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                return;
+                    repositoryOptions.Authentication.ClientSecret, cancel).ConfigureAwait(false);
+                
+                server.Authentication.AccessToken = accessToken;
             }
 
             // api key authentication
-            if (!string.IsNullOrEmpty(server.Authentication.ApiKey))
+            if (!string.IsNullOrEmpty(repositoryOptions.Authentication.ApiKey))
             {
-                client.DefaultRequestHeaders.Add("apikey", repositoryOptions.Authentication.ApiKey);
+                server.Authentication.ApiKey = repositoryOptions.Authentication.ApiKey;
             }
+
+            return server;
         }
     }
 }
