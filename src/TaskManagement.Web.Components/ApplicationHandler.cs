@@ -44,12 +44,17 @@ namespace SenseNet.TaskManagement.Web
 
         private readonly ITokenStore _tokenStore;
         private readonly TaskDataHandler _dataHandler;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ISnClientProvider _snClientProvider;
         private readonly ILogger<ApplicationHandler> _logger;
 
-        public ApplicationHandler(ITokenStore tokenStore, TaskDataHandler dataHandler, ILogger<ApplicationHandler> logger)
+        public ApplicationHandler(ITokenStore tokenStore, TaskDataHandler dataHandler, IHttpClientFactory httpClientFactory, 
+            ISnClientProvider snClientProvider, ILogger<ApplicationHandler> logger)
         {
             _tokenStore = tokenStore;
             _dataHandler = dataHandler;
+            _httpClientFactory = httpClientFactory;
+            _snClientProvider = snClientProvider;
             _logger = logger;
         }
 
@@ -92,7 +97,7 @@ namespace SenseNet.TaskManagement.Web
 
         //============================================================================ Communication
 
-        internal async Task SendFinalizeNotificationAsync(SnTaskResult result, CancellationToken cancellationToken)
+        internal async Task SendFinalizeNotificationAsync(SnTaskResult result, CancellationToken cancel)
         {
             if (result?.Task == null || string.IsNullOrEmpty(result.Task.AppId))
                 return;
@@ -105,12 +110,12 @@ namespace SenseNet.TaskManagement.Web
             if (string.IsNullOrEmpty(finalizeUrl))
                 return;
 
-            _logger.LogTrace("Sending finalize notification. AppId: {appId}." +
+            _logger.LogTrace("Sending finalize notification. AppId: {appId}. " +
                              "Agent: {agentName}, Task: {taskId}, Type: {taskType}, " +
                              "task success: {taskSuccessful}",
                 result.Task.AppId, result.AgentName, result.Task.Id, result.Task.Type, result.Successful);
 
-            using var client = await GetHttpClient(app.ApplicationUrl).ConfigureAwait(false);
+            using var client = await GetHttpClient(app.ApplicationUrl, cancel).ConfigureAwait(false);
 
             // create post data
             var content = new StringContent(JsonConvert.SerializeObject(new {result}), Encoding.UTF8,
@@ -118,11 +123,11 @@ namespace SenseNet.TaskManagement.Web
 
             try
             {
-                var response = await client.PostAsync(finalizeUrl, content, cancellationToken).ConfigureAwait(false);
+                var response = await client.PostAsync(finalizeUrl, content, cancel).ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    var responseText = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+                    var responseText = await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false);
 
                     _logger.LogWarning("Error during finalize REST API call. Url: {finalizeUrl}, " +
                                        "Status code: {statusCode}. Response: {responseText}",
@@ -137,7 +142,7 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
-        internal async Task<bool> SendPingRequestAsync(string appId, CancellationToken cancellationToken)
+        internal async Task<bool> SendPingRequestAsync(string appId, CancellationToken cancel)
         {
             var app = !string.IsNullOrEmpty(appId)
                 ? GetApplication(appId)
@@ -150,13 +155,13 @@ namespace SenseNet.TaskManagement.Web
                 return false;
             }
 
-            using var client = await GetHttpClient(app.ApplicationUrl).ConfigureAwait(false);
+            using var client = await GetHttpClient(app.ApplicationUrl, cancel).ConfigureAwait(false);
 
             try
             {
                 // Send a simple ping request to the application and 
                 // make sure it returns a 200 OK.
-                var response = await client.GetAsync(app.ApplicationUrl, cancellationToken).ConfigureAwait(false);
+                var response = await client.GetAsync(app.ApplicationUrl, cancel).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
 
                 SnTrace.TaskManagement.Write("AgentHub SendPingRequest completed successfully for appid {0}.", appId);
@@ -172,27 +177,15 @@ namespace SenseNet.TaskManagement.Web
 
         //============================================================================ Helper methods
 
-        private async Task<HttpClient> GetHttpClient(string appUrl)
+        private async Task<HttpClient> GetHttpClient(string appUrl, CancellationToken cancel)
         {
             // repo app request authentication: get auth token for appId and set it in a header
-            var client = new HttpClient();
+            var client = _httpClientFactory.CreateClient();
 
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-            //UNDONE: IsTrusted only in dev environment
-            var server = new Client.ServerContext
-            {
-                Url = appUrl,
-                IsTrusted = true,
-            };
-            
-            //UNDONE: get app-specific secret from configuration
-            var accessToken = await _tokenStore.GetTokenAsync(server, "client", "secret", CancellationToken.None)
-                .ConfigureAwait(false);
-
-            // add auth header
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            await _snClientProvider.SetAuthenticationAsync(client, appUrl, cancel);
 
             return client;
         }

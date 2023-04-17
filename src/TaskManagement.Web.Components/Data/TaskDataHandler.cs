@@ -136,13 +136,13 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
         #endregion
 
-        private readonly TaskManagementConfiguration _config;
+        private readonly TaskManagementWebOptions _config;
         private readonly string _connectionString;
 
-        public TaskDataHandler(IOptions<TaskManagementConfiguration> config, IConfiguration mainConfiguration)
+        public TaskDataHandler(IOptions<TaskManagementWebOptions> config, IConfiguration mainConfiguration)
         {
             _config = config.Value;
-            _connectionString = mainConfiguration.GetConnectionString("TaskDatabase");
+            _connectionString = mainConfiguration.GetConnectionString("TaskDatabase") ?? string.Empty;
         }
 
         //================================================================================= Manage tasks

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SenseNet.Diagnostics;
+using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
 using SenseNet.TaskManagement.Web;
 
@@ -15,14 +16,16 @@ namespace SenseNet.Extensions.DependencyInjection
             SnTrace.SnTracers.Add(new SnFileSystemTracer());
             SnTrace.EnableAll();
 
-            services.Configure<TaskManagementConfiguration>(options => 
+            services.Configure<TaskManagementWebOptions>(options => 
                     configuration.GetSection("TaskManagement").Bind(options));
 
             return services
                 .AddSingleton<TaskDataHandler>()
                 .AddSenseNetClientTokenStore()
                 .AddSingleton<ApplicationHandler>()
-                .AddHostedService<DeadTaskHostedService>();
+                .AddHostedService<DeadTaskHostedService>()
+                .AddSingleton<ISnClientProvider, DefaultSnClientProvider>()
+                .AddHttpClient();
         }
     }
 }
