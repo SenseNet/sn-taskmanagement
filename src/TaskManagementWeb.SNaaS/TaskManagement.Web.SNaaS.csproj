@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>SenseNet.TaskManagement.Web</RootNamespace>
+    <AssemblyName>SenseNet.TaskManagement.Web</AssemblyName>
+    <UserSecretsId>44518485-d2eb-409c-8601-342e3fd0e746</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IdentityModel" Version="6.0.0" />
+    <PackageReference Include="jQuery" Version="3.6.4" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.13" />
+    <PackageReference Include="SenseNet.Client" Version="3.0.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
+    <PackageReference Include="Serilog.Sinks.Graylog" Version="2.3.0" />
+    <PackageReference Include="SNaaS.Client" Version="0.0.8" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TaskManagement.Core\SenseNet.TaskManagement.Core.csproj" />
+    <ProjectReference Include="..\TaskManagement.Web.Components\TaskManagement.Web.Components.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Views\Shared\" />
+  </ItemGroup>
+
+</Project>
