@@ -1,3 +1,4 @@
+ARG ASPOSE_VERSION=latest
 FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
 WORKDIR /app
 
@@ -16,7 +17,7 @@ RUN dotnet publish "SenseNetTaskAgent.csproj" -c Release -o /app/publish /p:UseA
 WORKDIR "/src/TestExecutor/"
 RUN dotnet publish "TestExecutor.csproj" -c Release -o /app/testexecutorpublish
 
-FROM sensenetcsp/sn-preview-aspose:feature-containerization.2023.04.18 AS asposeexecutorpublish
+FROM sensenetcsp/sn-preview-aspose:${ASPOSE_VERSION} AS asposeexecutorpublish
 
 FROM base AS final
 RUN apt-get update && apt-get install -y iputils-ping \
