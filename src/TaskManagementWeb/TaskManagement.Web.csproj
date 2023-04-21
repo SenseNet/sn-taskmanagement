@@ -6,11 +6,13 @@
     <RootNamespace>SenseNet.TaskManagement.Web</RootNamespace>
     <AssemblyName>SenseNet.TaskManagement.Web</AssemblyName>
     <UserSecretsId>44518485-d2eb-409c-8601-342e3fd0e746</UserSecretsId>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="IdentityModel" Version="6.0.0" />
     <PackageReference Include="jQuery" Version="3.6.4" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.13" />
     <PackageReference Include="SenseNet.Client" Version="3.0.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
