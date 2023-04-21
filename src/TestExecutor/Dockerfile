@@ -16,4 +16,5 @@ FROM base AS final
 RUN mkdir /app/TaskExecutors/TestExecutor -p
 WORKDIR /app/TaskExecutors/TestExecutor
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "TestExecutor.dll"]
+WORKDIR /app
+ENTRYPOINT ["dotnet", "SenseNetTaskAgent.dll"]
