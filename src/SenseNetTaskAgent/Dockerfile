@@ -8,14 +8,10 @@ COPY . .
 RUN dotnet restore "TaskManagement.sln" 
 WORKDIR "/src/SenseNetTaskAgent"
 RUN dotnet build "SenseNetTaskAgent.csproj" -c Release -o /app/build
-WORKDIR "/src/TestExecutor/"
-RUN dotnet build "TestExecutor.csproj" -c Release -o /app/testexecutorbuild
 
 FROM build AS publish
 WORKDIR "/src/SenseNetTaskAgent/"
 RUN dotnet publish "SenseNetTaskAgent.csproj" -c Release -o /app/publish /p:UseAppHost=false
-WORKDIR "/src/TestExecutor/"
-RUN dotnet publish "TestExecutor.csproj" -c Release -o /app/testexecutorpublish
 
 FROM sensenetcsp/sn-preview-aspose:${ASPOSE_VERSION} AS asposeexecutorpublish
 
@@ -29,8 +25,6 @@ RUN mkdir /app/TaskExecutors/TestExecutor -p
 RUN mkdir /app/TaskExecutors/AsposePreviewGenerator -p
 WORKDIR /app
 COPY --from=publish /app/publish .
-WORKDIR /app/TaskExecutors/TestExecutor
-COPY --from=publish /app/testexecutorpublish .
 WORKDIR /app/TaskExecutors/AsposePreviewGenerator
 COPY --from=asposeexecutorpublish /app .
 WORKDIR /app
