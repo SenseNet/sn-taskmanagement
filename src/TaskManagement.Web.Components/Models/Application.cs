@@ -1,4 +1,4 @@
-﻿using System;
+﻿using SenseNet.TaskManagement.Core;
 
 // ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Web
@@ -12,5 +12,6 @@ namespace SenseNet.TaskManagement.Web
         public string AuthorizationUrl { get; set; }
         public DateTime RegistrationDate { get; set; }
         public DateTime LastUpdateDate { get; set; }
+        public TaskAuthenticationOptions[] Authentication { get; set; } = Array.Empty<TaskAuthenticationOptions>();
     }
 }
