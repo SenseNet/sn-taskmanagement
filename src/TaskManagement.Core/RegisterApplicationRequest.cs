@@ -1,4 +1,6 @@
-﻿namespace SenseNet.TaskManagement.Core
+﻿using System;
+
+namespace SenseNet.TaskManagement.Core
 {
     /// <summary>
     /// Holds all the information needed for registering an application.
@@ -29,5 +31,10 @@
         /// Relative or absolute url of an authorization callback in the client application (NOT IMPLEMENTED).
         /// </summary>
         public string AuthorizationUrl { get; set; }
+
+        /// <summary>
+        /// Authentication options for the client application.
+        /// </summary>
+        public TaskAuthenticationOptions[] Authentication { get; set; } = Array.Empty<TaskAuthenticationOptions>();
     }
 }

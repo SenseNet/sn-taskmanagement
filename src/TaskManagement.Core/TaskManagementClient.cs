@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -9,19 +8,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using SenseNet.Diagnostics;
 
 namespace SenseNet.TaskManagement.Core
 {
-    public class TaskManagementOptions
-    {
-        public string Url { get; set; }
-
-        public string ApplicationUrl { get; set; }
-
-        public string ApplicationId { get; set; }
-    }
-
     public interface ITaskManagementClient
     {
         /// <summary>
