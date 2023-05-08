@@ -65,8 +65,26 @@ namespace SenseNet.TaskManagement.Hubs
 
                 // task details are not passed to the monitor yet
                 if (task != null)
-                    await _monitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null, 
-                        task.AppId, task.Tag, machineName, agentName)).ConfigureAwait(false); 
+                {
+                    await _monitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null,
+                        task.AppId, task.Tag, machineName, agentName)).ConfigureAwait(false);
+
+                    // set authentication on the task object
+                    var app = _applicationHandler.GetApplication(task.AppId);
+                    if (app != null)
+                    {
+                        // select the authentication method based on the task type - or use the default one
+                        var appAuth =
+                            app.Authentication.FirstOrDefault(authOptions => authOptions.TaskType == task.Type) ??
+                            app.Authentication.FirstOrDefault(authOptions =>
+                                (string.IsNullOrEmpty(authOptions.TaskType) || string.Equals(authOptions.TaskType,
+                                    TaskAuthenticationOptions.DefaultTaskType,
+                                    StringComparison.InvariantCultureIgnoreCase)));
+
+                        if (appAuth != null)
+                            task.Authentication = appAuth;
+                    }
+                }
 
                 return task;
             }

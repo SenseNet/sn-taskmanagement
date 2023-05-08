@@ -89,10 +89,10 @@ namespace SenseNet.TaskManagement.TaskAgent
             var app = _config.Applications.FirstOrDefault(a =>
                 string.Equals(a.AppId, task.AppId, StringComparison.OrdinalIgnoreCase));
 
-            var userParameter = "USERNAME:\"" + (app?.ClientId ?? (task.AppId ?? string.Empty)) + "\"";
-            var passwordParameter = "PASSWORD:\"" + (app?.Secret ?? string.Empty) + "\"";
+            var userParameter = "USERNAME:\"" + (app?.ClientId ?? (task.Authentication?.ClientId ?? string.Empty)) + "\"";
+            var passwordParameter = "PASSWORD:\"" + (app?.Secret ?? task.Authentication?.ClientSecret) + "\"";
             var dataParameter = "DATA:\"" + EscapeArgument(task.TaskData) + "\"";
-            var apiKeyParameter = "APIKEY:\"" + (app?.ApiKey ?? string.Empty) + "\"";
+            var apiKeyParameter = "APIKEY:\"" + (app?.ApiKey ?? task.Authentication?.ApiKey) + "\"";
 
             //if RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 
