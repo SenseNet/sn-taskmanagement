@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SenseNet.Client.Authentication;
+using System;
 
 namespace SenseNet.TaskManagement.Core
 {
@@ -87,5 +88,9 @@ namespace SenseNet.TaskManagement.Core
         /// Custom callback url for this task type.
         /// </summary>
         public string FinalizeUrl { get; set; }
+        /// <summary>
+        /// Authentication options for the client application.
+        /// </summary>
+        public AuthenticationOptions Authentication { get; set; } = new AuthenticationOptions();
     }
 }
