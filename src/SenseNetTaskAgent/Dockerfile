@@ -13,11 +13,6 @@ WORKDIR "/src/SenseNetTaskAgent/"
 RUN dotnet publish "SenseNetTaskAgent.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
-RUN apt-get update \
-    && apt-get install -y libc6-dev \
-    && apt-get install -y libgdiplus \
-    && apt-get install -y libx11-dev \    
-    && apt-get install -y libfontconfig1
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "SenseNetTaskAgent.dll"]
