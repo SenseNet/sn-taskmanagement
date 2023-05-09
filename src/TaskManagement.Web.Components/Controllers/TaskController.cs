@@ -5,7 +5,9 @@ using SenseNet.TaskManagement.Hubs;
 using SenseNet.TaskManagement.Web;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using SenseNet.Diagnostics;
+using EventId = SenseNet.Diagnostics.EventId;
 
 // ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Controllers
@@ -16,14 +18,16 @@ namespace SenseNet.TaskManagement.Controllers
         private readonly IHubContext<TaskMonitorHub> _monitorHub;
         private readonly ApplicationHandler _applicationHandler;
         private readonly TaskDataHandler _dataHandler;
+        private readonly ILogger<TaskController> _logger;
 
         public TaskController(IHubContext<AgentHub> agentHub, IHubContext<TaskMonitorHub> monitorHub,
-            ApplicationHandler appHandler, TaskDataHandler dataHandler)
+            ApplicationHandler appHandler, TaskDataHandler dataHandler, ILogger<TaskController> logger)
         {
             _agentHub = agentHub;
             _monitorHub = monitorHub;
             _applicationHandler = appHandler;
             _dataHandler = dataHandler;
+            _logger = logger;
         }
 
         /// <summary>
@@ -117,6 +121,12 @@ namespace SenseNet.TaskManagement.Controllers
             {
                 var _ = await _dataHandler.RegisterApplicationAsync(appRequest, HttpContext.RequestAborted)
                     .ConfigureAwait(false);
+
+                _logger.LogTrace("Application registered with app id {appId}, url: {url}, authentication: {auth}",
+                    appRequest.AppId, appRequest.ApplicationUrl,
+                    string.Join(", ",
+                        appRequest.Authentication?.Select(a => a.TaskType + ": " + a.ApiKey[..5]) ??
+                        Array.Empty<string>()));
             }
             catch (Exception ex)
             {

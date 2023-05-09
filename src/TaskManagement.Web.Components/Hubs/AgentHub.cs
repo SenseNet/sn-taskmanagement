@@ -28,12 +28,15 @@ namespace SenseNet.TaskManagement.Hubs
         private readonly IHubContext<TaskMonitorHub> _monitorHub;
         private readonly ApplicationHandler _applicationHandler;
         private readonly TaskDataHandler _dataHandler;
+        private readonly ApplicationConnector _applicationConnector;
 
-        public AgentHub(IHubContext<TaskMonitorHub> monitorHub, ApplicationHandler appHandler, TaskDataHandler dataHandler)
+        public AgentHub(IHubContext<TaskMonitorHub> monitorHub, ApplicationHandler appHandler, TaskDataHandler dataHandler,
+            ApplicationConnector applicationConnector)
         {
             _monitorHub = monitorHub;
             _applicationHandler = appHandler;
             _dataHandler = dataHandler;
+            _applicationConnector = applicationConnector;
 
             if (_monitorHub == null)
                 SnTrace.TaskManagement.WriteError($"AgentHub MonitorHub is null.");
@@ -65,8 +68,20 @@ namespace SenseNet.TaskManagement.Hubs
 
                 // task details are not passed to the monitor yet
                 if (task != null)
-                    await _monitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null, 
-                        task.AppId, task.Tag, machineName, agentName)).ConfigureAwait(false); 
+                {
+                    await _monitorHub.OnTaskEvent(SnTaskEvent.CreateStartedEvent(task.Id, task.Title, null,
+                        task.AppId, task.Tag, machineName, agentName)).ConfigureAwait(false);
+
+                    // set authentication on the task object
+                    var app = _applicationHandler.GetApplication(task.AppId);
+                    if (app != null)
+                    {
+                        // select the authentication method based on the task type - or use the default one
+                        var appAuth = app.GetAuthenticationForTask(task.Type);
+                        if (appAuth != null)
+                            task.Authentication = appAuth;
+                    }
+                }
 
                 return task;
             }
@@ -132,7 +147,7 @@ namespace SenseNet.TaskManagement.Hubs
                     : $"AgentHub Finalizing task #{taskResult.Task.Id}");
 
                 // first we make sure that the app is accessible by sending a ping request
-                if (doesApplicationNeedNotification && !(await _applicationHandler.SendPingRequestAsync(taskResult.Task.AppId, 
+                if (doesApplicationNeedNotification && !(await _applicationConnector.SendPingRequestAsync(taskResult.Task, 
                         Context?.ConnectionAborted ?? CancellationToken.None)
                         .ConfigureAwait(false)))
                 {
@@ -160,7 +175,7 @@ namespace SenseNet.TaskManagement.Hubs
                     // This method does not need to be awaited, because we do not want to do anything 
                     // with the result, only notify the app that the task has been finished.
 #pragma warning disable 4014
-                    _applicationHandler.SendFinalizeNotificationAsync(taskResult, CancellationToken.None);
+                    _applicationConnector.SendFinalizeNotificationAsync(taskResult, CancellationToken.None);
 #pragma warning restore 4014
                 }
 

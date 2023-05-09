@@ -46,12 +46,12 @@ namespace SenseNet.TaskManagement.Web
                 Url = appUrl,
                 IsTrusted = true,
             };
-
+            
             // get app-specific secret from configuration
             var repositoryOptions = _taskManagementWebOptions.Applications.FirstOrDefault(r => r.Url == appUrl);
             if (repositoryOptions == null)
             {
-                _logger.LogTrace("Warning: no repository configured for app url {appUrl}", appUrl);
+                _logger.LogTrace("No repository configured for app url {appUrl}", appUrl);
                 return server;
             }
 

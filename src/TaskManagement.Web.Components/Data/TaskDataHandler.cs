@@ -2,10 +2,12 @@
 using System.Data.SqlClient;
 using System.Data;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Web;
+using EventId = SenseNet.Diagnostics.EventId;
 
 // ReSharper disable InconsistentNaming
 // ReSharper disable IdentifierTypo
@@ -14,6 +16,8 @@ namespace SenseNet.TaskManagement.Data
 {
     public class TaskDataHandler
     {
+        private readonly ILogger<TaskDataHandler> _logger;
+
         #region SQL SCRIPTS
 
         private const string REGISTERAPPLICATIONSQL = @"DECLARE @Created bit SET @Created = 0
@@ -139,8 +143,10 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         private readonly TaskManagementWebOptions _config;
         private readonly string _connectionString;
 
-        public TaskDataHandler(IOptions<TaskManagementWebOptions> config, IConfiguration mainConfiguration)
+        public TaskDataHandler(IOptions<TaskManagementWebOptions> config, IConfiguration mainConfiguration, 
+            ILogger<TaskDataHandler> logger)
         {
+            _logger = logger;
             _config = config.Value;
             _connectionString = mainConfiguration.GetConnectionString("TaskDatabase") ?? string.Empty;
         }
@@ -449,7 +455,7 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
         public async Task<Application> RegisterApplicationAsync(RegisterApplicationRequest request, CancellationToken cancellationToken)
         {
             await using var cn = new SqlConnection(_connectionString);
-            SqlCommand cm1 = null;
+            SqlCommand? cm1 = null;
 
             try
             {
@@ -460,33 +466,38 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
                 cm1.Connection = cn;
                 cm1.CommandType = CommandType.Text;
 
+                var jss = new JsonSerializerSettings
+                {
+                    NullValueHandling = NullValueHandling.Ignore
+                };
+
                 var appData = JsonConvert.SerializeObject(new
                 {
                     request.ApplicationUrl,
                     request.TaskFinalizeUrl,
                     request.AuthenticationUrl,
-                    request.AuthorizationUrl
-                });
+                    request.AuthorizationUrl,
+                    request.Authentication,
+                }, jss);
 
                 var resultApp = new Application
                 {
                     AppId = request.AppId,
                     ApplicationUrl = request.ApplicationUrl,
                     AuthenticationUrl = request.AuthenticationUrl,
-                    AuthorizationUrl = request.AuthorizationUrl
+                    AuthorizationUrl = request.AuthorizationUrl,
+                    Authentication = request.Authentication,
                 };
 
                 cm1.Parameters.Add("@AppId", SqlDbType.NVarChar).Value = request.AppId;
                 cm1.Parameters.Add("@AppData", SqlDbType.NVarChar).Value = appData;
 
-                await using (var reader = await cm1.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    // there must be only one row
-                    await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+                await using var reader = await cm1.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                // there must be only one row
+                await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
 
-                    resultApp.RegistrationDate = reader.GetDateTime(reader.GetOrdinal("RegistrationDate"));
-                    resultApp.LastUpdateDate = reader.GetDateTime(reader.GetOrdinal("LastUpdateDate"));
-                }
+                resultApp.RegistrationDate = reader.GetDateTime(reader.GetOrdinal("RegistrationDate"));
+                resultApp.LastUpdateDate = reader.GetDateTime(reader.GetOrdinal("LastUpdateDate"));
 
                 return resultApp;
             }
@@ -535,12 +546,15 @@ SELECT Id, SubTaskId, 'Failed', EventTime, Title, Tag, Details, AppId, Machine, 
 
             if (!string.IsNullOrEmpty(appData))
             {
-                dynamic appDataObj = JsonConvert.DeserializeObject(appData);
-
-                app.ApplicationUrl = appDataObj.ApplicationUrl;
-                app.AuthenticationUrl = appDataObj.AuthenticationUrl;
-                app.AuthorizationUrl = appDataObj.AuthorizationUrl;
-                app.TaskFinalizeUrl = appDataObj.TaskFinalizeUrl;
+                try
+                {
+                    JsonConvert.PopulateObject(appData, app);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogWarning(e, "App data deserialization error. AppId: {appid} {message}", 
+                        app.AppId, e.Message);
+                }
             }
 
             return app;

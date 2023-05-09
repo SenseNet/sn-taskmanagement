@@ -23,6 +23,7 @@ namespace SenseNet.Extensions.DependencyInjection
                 .AddSingleton<TaskDataHandler>()
                 .AddSenseNetClientTokenStore()
                 .AddSingleton<ApplicationHandler>()
+                .AddSingleton<ApplicationConnector>()
                 .AddHostedService<DeadTaskHostedService>()
                 .AddSingleton<ISnClientProvider, DefaultSnClientProvider>()
                 .AddHttpClient();

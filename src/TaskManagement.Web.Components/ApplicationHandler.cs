@@ -1,13 +1,7 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Net.Http.Headers;
-using System.Text;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using SenseNet.Client.Authentication;
+﻿using Microsoft.Extensions.Logging;
+using SenseNet.Client;
 using SenseNet.Diagnostics;
-using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
-using EventId = SenseNet.Diagnostics.EventId;
 
 // ReSharper disable once CheckNamespace
 namespace SenseNet.TaskManagement.Web
@@ -42,19 +36,12 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
-        private readonly ITokenStore _tokenStore;
         private readonly TaskDataHandler _dataHandler;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly ISnClientProvider _snClientProvider;
         private readonly ILogger<ApplicationHandler> _logger;
 
-        public ApplicationHandler(ITokenStore tokenStore, TaskDataHandler dataHandler, IHttpClientFactory httpClientFactory, 
-            ISnClientProvider snClientProvider, ILogger<ApplicationHandler> logger)
+        public ApplicationHandler(TaskDataHandler dataHandler, ILogger<ApplicationHandler> logger)
         {
-            _tokenStore = tokenStore;
             _dataHandler = dataHandler;
-            _httpClientFactory = httpClientFactory;
-            _snClientProvider = snClientProvider;
             _logger = logger;
         }
 
@@ -95,99 +82,25 @@ namespace SenseNet.TaskManagement.Web
             return app;
         }
 
-        //============================================================================ Communication
-
-        internal async Task SendFinalizeNotificationAsync(SnTaskResult result, CancellationToken cancel)
+        public Application GetApplicationByUrl(string appUrl)
         {
-            if (result?.Task == null || string.IsNullOrEmpty(result.Task.AppId))
-                return;
+            if (string.IsNullOrEmpty(appUrl))
+                return null;
 
-            // load the finalize url from the task or a global app setting
-            var app = GetApplication(result.Task.AppId);
-            var finalizeUrl = result.Task.GetFinalizeUrl(app);
+            appUrl = appUrl.TrimSchema();
 
-            // cannot do much: no finalize url found for the task
-            if (string.IsNullOrEmpty(finalizeUrl))
-                return;
+            var app = Applications.FirstOrDefault(a => 
+                string.Compare(a.ApplicationUrl.TrimSchema(), appUrl, StringComparison.InvariantCulture) == 0);
 
-            _logger.LogTrace("Sending finalize notification. AppId: {appId}. " +
-                             "Agent: {agentName}, Task: {taskId}, Type: {taskType}, " +
-                             "task success: {taskSuccessful}",
-                result.Task.AppId, result.AgentName, result.Task.Id, result.Task.Type, result.Successful);
-
-            using var client = await GetHttpClient(app.ApplicationUrl, cancel).ConfigureAwait(false);
-
-            // create post data
-            var content = new StringContent(JsonConvert.SerializeObject(new {result}), Encoding.UTF8,
-                "application/json");
-
-            try
+            if (app == null)
             {
-                var response = await client.PostAsync(finalizeUrl, content, cancel).ConfigureAwait(false);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var responseText = await response.Content.ReadAsStringAsync(cancel).ConfigureAwait(false);
-
-                    _logger.LogWarning("Error during finalize REST API call. Url: {finalizeUrl}, " +
-                                       "Status code: {statusCode}. Response: {responseText}",
-                        finalizeUrl, response.StatusCode, responseText);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during finalize REST API call. " +
-                                     "Application: {appId}, Task: {taskId}, Type: {taskType}", 
-                    app.AppId, result.Task.Id, result.Task.Type);
-            }
-        }
-
-        internal async Task<bool> SendPingRequestAsync(string appId, CancellationToken cancel)
-        {
-            var app = !string.IsNullOrEmpty(appId)
-                ? GetApplication(appId)
-                : null;
-
-            // application url not found
-            if (app == null || string.IsNullOrEmpty(app.ApplicationUrl))
-            {
-                SnTrace.TaskManagement.Write("SendPingRequest could not complete: no url found for appid {0}.", appId);
-                return false;
+                // try to reload apps from the db: workaround for load balanced behavior
+                Reset();
+                app = Applications.FirstOrDefault(a =>
+                    string.Compare(a.ApplicationUrl.TrimSchema(), appUrl, StringComparison.InvariantCulture) == 0);
             }
 
-            using var client = await GetHttpClient(app.ApplicationUrl, cancel).ConfigureAwait(false);
-
-            try
-            {
-                // Send a simple ping request to the application and 
-                // make sure it returns a 200 OK.
-                var response = await client.GetAsync(app.ApplicationUrl, cancel).ConfigureAwait(false);
-                response.EnsureSuccessStatusCode();
-
-                SnTrace.TaskManagement.Write("AgentHub SendPingRequest completed successfully for appid {0}.", appId);
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                SnTrace.TaskManagement.Write($"AgentHub SendPingRequest FAILED for appid {appId}. {ex.Message}");
-                return false;
-            }
-        }
-
-        //============================================================================ Helper methods
-
-        private async Task<HttpClient> GetHttpClient(string appUrl, CancellationToken cancel)
-        {
-            // repo app request authentication: get auth token for appId and set it in a header
-            var client = _httpClientFactory.CreateClient();
-
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            await _snClientProvider.SetAuthenticationAsync(client, appUrl, cancel);
-
-            return client;
+            return app;
         }
     }
 }
