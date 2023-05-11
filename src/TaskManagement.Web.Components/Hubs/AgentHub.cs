@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using SenseNet.Diagnostics;
 using SenseNet.TaskManagement.Core;
 using SenseNet.TaskManagement.Data;
 using SenseNet.TaskManagement.Web;
+using EventId = SenseNet.Diagnostics.EventId;
 
 namespace SenseNet.TaskManagement.Hubs
 {
@@ -29,14 +31,16 @@ namespace SenseNet.TaskManagement.Hubs
         private readonly ApplicationHandler _applicationHandler;
         private readonly TaskDataHandler _dataHandler;
         private readonly ApplicationConnector _applicationConnector;
+        private readonly ILogger<AgentHub> _logger;
 
         public AgentHub(IHubContext<TaskMonitorHub> monitorHub, ApplicationHandler appHandler, TaskDataHandler dataHandler,
-            ApplicationConnector applicationConnector)
+            ApplicationConnector applicationConnector, ILogger<AgentHub> logger)
         {
             _monitorHub = monitorHub;
             _applicationHandler = appHandler;
             _dataHandler = dataHandler;
             _applicationConnector = applicationConnector;
+            _logger = logger;
 
             if (_monitorHub == null)
                 SnTrace.TaskManagement.WriteError($"AgentHub MonitorHub is null.");
@@ -76,10 +80,24 @@ namespace SenseNet.TaskManagement.Hubs
                     var app = _applicationHandler.GetApplication(task.AppId);
                     if (app != null)
                     {
+                        _logger.LogTrace("GetTask: Application found for app {appId}", task.AppId);
+
                         // select the authentication method based on the task type - or use the default one
                         var appAuth = app.GetAuthenticationForTask(task.Type);
                         if (appAuth != null)
+                        {
                             task.Authentication = appAuth;
+
+                            var apiKeyLog = string.IsNullOrEmpty(appAuth.ApiKey) ? "null" : $"[{appAuth.ApiKey[..3]}...]";
+
+                            _logger.LogTrace("GetTask: Authentication options for app {appId} and " +
+                                             "task type {taskType}: ApiKey: {apiKey} Client: {client}", task.AppId, task.Type,
+                                apiKeyLog, appAuth.ClientId);
+                        }
+                        else
+                        {
+                            _logger.LogTrace("GetTask: Authentication options NOT found for app {appId}", task.AppId);
+                        }
                     }
                 }
 

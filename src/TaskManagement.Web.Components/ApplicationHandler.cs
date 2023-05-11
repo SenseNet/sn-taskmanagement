@@ -25,9 +25,16 @@ namespace SenseNet.TaskManagement.Web
 
                     _applications = _dataHandler.GetApplications().ToList();
 
-                    var message = _applications.Count == 0 
+                    var message = _applications.Count == 0
                         ? "No apps found."
-                        : "Applications loaded: " + string.Join(" | ", _applications.Select(a => $"{a.AppId} ({a.ApplicationUrl})"));
+                        : "Applications loaded: " + string.Join(" | ",
+                            _applications.Select(a =>
+                            {
+                                var authLog = string.Join(" ", a.Authentication.Select(ao => 
+                                    $"task: {ao.TaskType} apikey: {ao.ApiKey[..3]}"));
+
+                                return $"{a.AppId} ({a.ApplicationUrl}, auth: {authLog})";
+                            }));
                             
                     _logger.LogInformation(message);
                 }
