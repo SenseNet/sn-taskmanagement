@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using SenseNet.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace SenseNet.TaskManagement.Web
 {
@@ -38,7 +39,9 @@ namespace SenseNet.TaskManagement.Web
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationHandler appHandler)
         {
-            //var logger = app.ApplicationServices.GetService<ILogger<Program>>();
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<Program>>();
+
+            logger.LogTrace("Building STANDALONE taskmanagement web app pipeline...");
 
             // This will set the global SnLog and SnTrace instances to route log messages to the
             // official .Net Core ILogger API.

@@ -23,11 +23,8 @@ namespace SenseNet.TaskManagement.Web
         public async Task SetAuthenticationAsync(HttpClient client, string appUrl, CancellationToken cancel)
         {
             var server = await GetServerContextAsync(appUrl, cancel).ConfigureAwait(false);
-            if (server == null)
-            {
-                _logger.LogTrace("Warning: no repository configured for app url {appUrl}", appUrl);
+            if (server == null) 
                 return;
-            }
 
             // client/secret authentication
             if (!string.IsNullOrEmpty(server.Authentication.AccessToken))
@@ -43,9 +40,23 @@ namespace SenseNet.TaskManagement.Web
             }
         }
 
-        public Task<ServerContext> GetServerContextAsync(string appUrl, CancellationToken cancel)
+        public async Task<ServerContext> GetServerContextAsync(string appUrl, CancellationToken cancel)
         {
-            return _secretStore.GetServerContextAsync(appUrl, cancel);
+            var server = await _secretStore.GetServerContextAsync(appUrl, cancel).ConfigureAwait(false);
+
+            if (server == null)
+            {
+                _logger.LogTrace("Warning: no repository found for app url {appUrl}", appUrl);
+            }
+            else
+            {
+                _logger.LogTrace("Server context loaded for app url {appUrl}. " +
+                                 "Access token: {accessToken} Api key: {apiKey}", appUrl,
+                    string.IsNullOrEmpty(server.Authentication.AccessToken) ? "null" : "[hidden]",
+                    string.IsNullOrEmpty(server.Authentication.ApiKey) ? "null" : "[hidden]");
+            }
+
+            return server;
         }
     }
 }

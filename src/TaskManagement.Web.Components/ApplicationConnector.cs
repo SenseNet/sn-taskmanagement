@@ -118,6 +118,8 @@ namespace SenseNet.TaskManagement.Web
             var appAuth = app.GetAuthenticationForTask(task.Type);
             if (appAuth?.ApiKey != null)
             {
+                _logger.LogTrace("Setting api key for app {appId} and task {task} with id {taskId}", app.ApplicationUrl,
+                    task.Type, task.Id);
                 client.DefaultRequestHeaders.Add("apikey", appAuth.ApiKey);
             }
 

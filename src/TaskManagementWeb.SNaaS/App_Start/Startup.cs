@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using SenseNet.Extensions.DependencyInjection;
 using SNaaS.Extensions.DependencyInjection;
 using SenseNet.TaskManagement.Core;
@@ -45,7 +46,9 @@ namespace SenseNet.TaskManagement.Web
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationHandler appHandler)
         {
-            //var logger = app.ApplicationServices.GetService<ILogger<Program>>();
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<Program>>();
+
+            logger.LogTrace("Building SNAAS taskmanagement web app pipeline...");
 
             // This will set the global SnLog and SnTrace instances to route log messages to the
             // official .Net Core ILogger API.

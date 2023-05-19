@@ -71,6 +71,11 @@ namespace SenseNet.TaskManagement.Web
                 server.Authentication.ApiKey = repositoryOptions.Authentication.ApiKey;
             }
 
+            _logger.LogTrace("Server context loaded for app url {appUrl}. " +
+                             "Access token: {accessToken} Api key: {apiKey}", appUrl,
+                string.IsNullOrEmpty(server.Authentication.AccessToken) ? "null" : "[hidden]",
+                string.IsNullOrEmpty(server.Authentication.ApiKey) ? "null" : "[hidden]");
+
             return server;
         }
     }
