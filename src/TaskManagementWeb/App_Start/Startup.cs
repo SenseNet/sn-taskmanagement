@@ -1,13 +1,11 @@
-﻿using SenseNet.TaskManagement.Data;
-using SenseNet.TaskManagement.Hubs;
+﻿using SenseNet.TaskManagement.Hubs;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SenseNet.Diagnostics;
 using SenseNet.Extensions.DependencyInjection;
-using EventId = SenseNet.Diagnostics.EventId;
+using Microsoft.Extensions.Logging;
 
 namespace SenseNet.TaskManagement.Web
 {
@@ -24,12 +22,6 @@ namespace SenseNet.TaskManagement.Web
         {
             services.AddControllersWithViews();
             services.AddSignalR();
-
-            SnLog.Instance = new SnFileSystemEventLogger();
-            SnTrace.SnTracers.Add(new SnFileSystemTracer());
-            SnTrace.EnableAll();
-
-            services.Configure<TaskManagementConfiguration>(Configuration.GetSection("TaskManagement"));
             
             //TODO: inject allowed origins dynamically (do not allow everything)
             services.AddCors(c =>
@@ -42,19 +34,18 @@ namespace SenseNet.TaskManagement.Web
                 });
             });
 
-            services.AddSingleton<TaskDataHandler>();
-            services.AddSenseNetClientTokenStore();
-            services.AddSingleton<ApplicationHandler>();
-            services.AddHostedService<DeadTaskHostedService>();
+            services.AddSenseNetTaskManagementWebServices(Configuration);
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ApplicationHandler appHandler)
         {
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<Program>>();
+
+            logger.LogTrace("Building STANDALONE taskmanagement web app pipeline...");
+
             // This will set the global SnLog and SnTrace instances to route log messages to the
             // official .Net Core ILogger API.
             app.ApplicationServices.AddSenseNetILogger();
-
-            SnLog.WriteInformation("Starting TaskManagement.Web", EventId.TaskManagement.Lifecycle);
 
             // make Web API use the standard ASP.NET error configuration
             //ConfigureErrorHandling();
@@ -99,8 +90,6 @@ namespace SenseNet.TaskManagement.Web
             
             //TODO: configure global error logging
             //httpConfiguration.Services.Add(typeof(IExceptionLogger), new WebExceptionLogger());
-            
-            SnLog.WriteInformation("SenseNet TaskManagement app started.", EventId.TaskManagement.Lifecycle);
 
             // load apps
             appHandler.Initialize();

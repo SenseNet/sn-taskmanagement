@@ -89,10 +89,29 @@ namespace SenseNet.TaskManagement.TaskAgent
             var app = _config.Applications.FirstOrDefault(a =>
                 string.Equals(a.AppId, task.AppId, StringComparison.OrdinalIgnoreCase));
 
-            var userParameter = "USERNAME:\"" + (app?.ClientId ?? (task.AppId ?? string.Empty)) + "\"";
-            var passwordParameter = "PASSWORD:\"" + (app?.Secret ?? string.Empty) + "\"";
+            if (app == null)
+            {
+                SnTrace.TaskManagement.Write($"Application was NOT found in configuration for app id {task.AppId} " +
+                                             $"and task {task.Id}");
+            }
+            else
+            {
+                SnTrace.TaskManagement.Write($"Application was found in configuration for app id {task.AppId} " +
+                                             $"and task {task.Id}");
+            }
+
+            var userValue = app?.ClientId ?? (task.Authentication?.ClientId ?? string.Empty);
+            var passwordValue = app?.Secret ?? task.Authentication?.ClientSecret;
+            var apiKeyValue = app?.ApiKey ?? task.Authentication?.ApiKey;
+
+            SnTrace.TaskManagement.Write($"Task executor parameters: task type: {task.Type} User: {userValue} " +
+                                         $"Password: {(string.IsNullOrEmpty(passwordValue) ? "null" : passwordValue[..3] )} " +
+                                         $"ApiKey: {(string.IsNullOrEmpty(apiKeyValue) ? "null" : apiKeyValue[..3])}");
+
+            var userParameter = "USERNAME:\"" + userValue + "\"";
+            var passwordParameter = "PASSWORD:\"" + passwordValue + "\"";
             var dataParameter = "DATA:\"" + EscapeArgument(task.TaskData) + "\"";
-            var apiKeyParameter = "APIKEY:\"" + (app?.ApiKey ?? string.Empty) + "\"";
+            var apiKeyParameter = "APIKEY:\"" + apiKeyValue + "\"";
 
             //if RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
 
