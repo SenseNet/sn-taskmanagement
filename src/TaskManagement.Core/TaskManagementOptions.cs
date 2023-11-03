@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using SenseNet.Tools.Configuration;
 
 namespace SenseNet.TaskManagement.Core
 {
@@ -7,6 +8,7 @@ namespace SenseNet.TaskManagement.Core
         public string User { get; set; }
     }
 
+    [OptionsClass(sectionName: "sensenet:TaskManagement")]
     public class TaskManagementOptions
     {
         public string Url { get; set; }

@@ -31,7 +31,7 @@
     <PackageReference Include="SenseNet.Client" Version="3.0.1" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="SenseNet.Tools" Version="3.2.11" />
+    <PackageReference Include="SenseNet.Tools" Version="3.2.12" />
   </ItemGroup>
 
 </Project>
