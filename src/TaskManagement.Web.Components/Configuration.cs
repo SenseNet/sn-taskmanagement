@@ -1,7 +1,9 @@
 ﻿using SenseNet.Client;
+using SenseNet.Tools.Configuration;
 
 namespace SenseNet.TaskManagement.Web
 {
+    [OptionsClass(sectionName: "TaskManagement")]
     public class TaskManagementWebOptions
     {
         /// <summary>
