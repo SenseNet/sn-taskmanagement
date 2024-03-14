@@ -15,7 +15,7 @@ jobs:
 
     env:
       BUILD_CONFIG: 'Release'
-      SOLUTION: 'TaskManagement.sln'
+      SOLUTION: 'TaskManagement.Packages.slnf'
 
     steps:
     - name: Checkout

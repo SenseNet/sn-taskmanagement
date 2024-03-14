@@ -1,0 +1,8 @@
+{
+  "solution": {
+    "path": "TaskManagement.sln",
+    "projects": [
+      "TaskManagement.Core\\SenseNet.TaskManagement.Core.csproj",
+    ]
+  }
+}
