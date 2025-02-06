@@ -4,8 +4,8 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY . .
-RUN dotnet restore "TaskManagement.sln" 
 WORKDIR "/src/SenseNetTaskAgent"
+RUN dotnet restore "SenseNetTaskAgent.csproj" 
 RUN dotnet build "SenseNetTaskAgent.csproj" -c Release -o /app/build
 
 FROM build AS publish
